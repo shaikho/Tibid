@@ -1,173 +1,103 @@
-import Link from 'next/link'
-
-import { CATEGORIES } from '@/lib/constants'
-import { getAdminOverview, getRecentRegistrations, getUpcomingActivities } from '@/lib/queries'
-import { sheetsConfigured } from '@/lib/google-sheets'
-import { dayParts, formatTime, initials, publicName } from '@/lib/utils'
+import { getAllMembers } from '@/lib/queries'
+import { GENDERS } from '@/lib/constants'
+import { formatDate, instagramUrl, normalizeInstagram } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 
-export default async function AdminOverviewPage() {
-  const [overview, upcoming, recent] = await Promise.all([
-    getAdminOverview().catch(() => null),
-    getUpcomingActivities({ limit: 5, includeUnpublished: true }).catch(() => []),
-    getRecentRegistrations(8).catch(() => []),
-  ])
-
-  if (!overview) {
-    return (
-      <div className="card p-8 text-center">
-        <h2 className="font-display text-lg font-bold text-deep">Database not reachable</h2>
-        <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-tide">
-          Make sure <code className="rounded bg-mist px-1.5 py-0.5">DATABASE_URL</code> is set and
-          you have run <code className="rounded bg-mist px-1.5 py-0.5">npm run db:push</code>.
-        </p>
-      </div>
-    )
-  }
+export default async function AdminMembersPage() {
+  const members = await getAllMembers().catch(() => [])
 
   return (
-    <div className="space-y-8">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Upcoming activities" value={overview.upcoming} href="/admin/activities" />
-        <Stat label="Total registrations" value={overview.totalRegistrations} href="/admin/registrations" />
-        <Stat label="Community members" value={overview.members} href="/admin/members" />
-        <Stat
-          label="Awaiting Sheets sync"
-          value={overview.pendingSheetSync}
-          href="/admin/settings"
-          tone={overview.pendingSheetSync > 0 && sheetsConfigured() ? 'warn' : 'default'}
-        />
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="font-display text-lg font-bold text-deep">Community profiles</h2>
+          <p className="mt-1 text-sm leading-relaxed text-tide">
+            Everyone who has created an account. Guests who signed up without one appear under
+            Registrations instead.
+          </p>
+        </div>
+        <a href="/api/admin/export?type=members" className="btn btn-outline !py-2 !text-xs" download>
+          ⬇ Export CSV
+        </a>
       </div>
 
-      {!sheetsConfigured() && (
-        <div className="rounded-2xl border border-sand/50 bg-sand/15 p-5">
-          <h2 className="font-display text-base font-bold text-deep">
-            Google Sheets sync isn&rsquo;t switched on yet
-          </h2>
-          <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-tide">
-            Registrations are being saved to the database as normal — they just aren&rsquo;t
-            mirrored to your sheet. Add the three Google env vars in Vercel and every future sign-up
-            appends automatically. Existing ones can be back-filled from Settings.
-          </p>
-          <Link href="/admin/settings" className="btn btn-outline mt-4 !py-2 !text-sm">
-            Set it up
-          </Link>
+      {members.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-foam p-10 text-center text-sm text-tide">
+          No profiles yet.
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-2xl border border-foam">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[48rem] border-collapse text-sm">
+              <thead>
+                <tr className="bg-mist/70 text-left text-xs font-bold uppercase tracking-wide text-tide">
+                  <th className="px-4 py-3">Name</th>
+                  <th className="px-4 py-3">Contact</th>
+                  <th className="px-4 py-3">Instagram</th>
+                  <th className="px-4 py-3">Gender</th>
+                  <th className="px-4 py-3">Sign-ups</th>
+                  <th className="px-4 py-3">Joined</th>
+                  <th className="px-4 py-3">Role</th>
+                </tr>
+              </thead>
+              <tbody>
+                {members.map((m) => (
+                  <tr key={m.id} className="border-t border-foam/70 bg-white hover:bg-mist/40">
+                    <td className="px-4 py-3 font-semibold text-deep">
+                      {m.firstName} {m.lastName}
+                    </td>
+                    <td className="px-4 py-3 text-xs">
+                      <a href={`mailto:${m.email}`} className="block text-brand hover:underline">
+                        {m.email}
+                      </a>
+                      {m.phone && <span className="block text-tide">{m.phone}</span>}
+                    </td>
+                    <td className="px-4 py-3 text-xs">
+                      {m.instagram ? (
+                        <a
+                          href={instagramUrl(m.instagram) ?? '#'}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                          className="text-brand hover:underline"
+                        >
+                          {normalizeInstagram(m.instagram)}
+                        </a>
+                      ) : (
+                        <span className="text-tide/50">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-tide">
+                      {m.gender ? GENDERS[m.gender] : '—'}
+                    </td>
+                    <td className="px-4 py-3 font-semibold text-deep">{m.signupCount}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-xs text-tide">
+                      {formatDate(m.createdAt)}
+                    </td>
+                    <td className="px-4 py-3">
+                      {m.role === 'admin' ? (
+                        <span className="chip bg-brand text-white">Admin</span>
+                      ) : (
+                        <span className="chip bg-mist text-tide">Member</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <section className="card p-6">
-          <div className="flex items-baseline justify-between">
-            <h2 className="font-display text-lg font-bold text-deep">Next up</h2>
-            <Link href="/admin/activities" className="text-sm font-semibold text-brand hover:underline">
-              All activities →
-            </Link>
-          </div>
-
-          {upcoming.length === 0 ? (
-            <p className="mt-4 text-sm leading-relaxed text-tide">
-              Nothing scheduled.{' '}
-              <Link href="/admin/activities/new" className="font-semibold text-brand hover:underline">
-                Create the first activity
-              </Link>
-              .
-            </p>
-          ) : (
-            <ul className="mt-4 space-y-2.5">
-              {upcoming.map((a) => {
-                const { day, month, weekday } = dayParts(a.startsAt)
-                return (
-                  <li key={a.id}>
-                    <Link
-                      href={`/admin/activities/${a.id}`}
-                      className="group flex items-center gap-3.5 rounded-2xl border border-foam/80 p-3 transition hover:border-brand/40 hover:bg-mist/50"
-                    >
-                      <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-mist text-center">
-                        <span className="block text-[9px] font-bold uppercase text-brand">
-                          {weekday}
-                        </span>
-                        <span className="block font-display text-base font-bold leading-none text-deep">
-                          {day}
-                        </span>
-                        <span className="block text-[8px] font-semibold uppercase text-tide">
-                          {month}
-                        </span>
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-semibold text-deep group-hover:text-brand">
-                          {a.title}
-                        </span>
-                        <span className="mt-0.5 block text-xs text-tide">
-                          {CATEGORIES[a.category].emoji} {formatTime(a.startsAt)} ·{' '}
-                          {a.attendeeCount} signed up
-                        </span>
-                      </span>
-                      {!a.published && <span className="chip shrink-0 bg-sand/40 text-deep">Draft</span>}
-                    </Link>
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-        </section>
-
-        <section className="card p-6">
-          <div className="flex items-baseline justify-between">
-            <h2 className="font-display text-lg font-bold text-deep">Latest sign-ups</h2>
-            <Link href="/admin/registrations" className="text-sm font-semibold text-brand hover:underline">
-              All registrations →
-            </Link>
-          </div>
-
-          {recent.length === 0 ? (
-            <p className="mt-4 text-sm text-tide">No registrations yet.</p>
-          ) : (
-            <ul className="mt-4 space-y-2.5">
-              {recent.map(({ registration: r, activity: a }) => (
-                <li key={r.id} className="flex items-center gap-3">
-                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-gradient-to-br from-brand to-brand-deeper text-[10px] font-bold text-white">
-                    {initials(r.firstName, r.lastName)}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold text-deep">
-                      {publicName(r.firstName, r.lastName)}
-                    </span>
-                    <span className="block truncate text-xs text-tide">{a.title}</span>
-                  </span>
-                  {!r.sheetSynced && sheetsConfigured() && (
-                    <span className="chip shrink-0 bg-coral/10 text-coral">not synced</span>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </div>
+      <p className="rounded-2xl border border-foam bg-mist/40 p-4 text-xs leading-relaxed text-tide">
+        <strong className="text-deep">Making someone an admin:</strong> add their email to the{' '}
+        <code className="rounded bg-white px-1.5 py-0.5">ADMIN_EMAILS</code> environment variable in
+        Vercel (comma-separated) before they sign up, or promote an existing account by running{' '}
+        <code className="rounded bg-white px-1.5 py-0.5">
+          UPDATE users SET role = &apos;admin&apos; WHERE email = &apos;…&apos;;
+        </code>{' '}
+        in the Neon SQL editor.
+      </p>
     </div>
-  )
-}
-
-function Stat({
-  label,
-  value,
-  href,
-  tone = 'default',
-}: {
-  label: string
-  value: number
-  href: string
-  tone?: 'default' | 'warn'
-}) {
-  return (
-    <Link
-      href={href}
-      className={`card card-hover block p-5 ${tone === 'warn' ? 'border-coral/40 bg-coral/5' : ''}`}
-    >
-      <div className="font-display text-3xl font-extrabold leading-none text-deep">
-        {value.toLocaleString()}
-      </div>
-      <div className="mt-2 text-xs font-semibold uppercase tracking-wide text-tide">{label}</div>
-    </Link>
   )
 }
