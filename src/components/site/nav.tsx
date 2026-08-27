@@ -13,8 +13,8 @@ type NavUser = { firstName: string; lastName: string; role: 'member' | 'admin' }
 const LINKS = [
   { href: '/', label: 'Home' },
   { href: '/activities', label: 'Activities' },
-  { href: '/#categories', label: 'What we do' },
   { href: '/#story', label: 'Our story' },
+  { href: '/#categories', label: 'What we do' },
   { href: '/#gallery', label: 'Moments' },
 ]
 
