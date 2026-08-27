@@ -17,7 +17,7 @@ export default async function SignUpPage({
   const session = await getSession().catch(() => null)
   const { next } = await searchParams
 
-  if (session) redirect(next?.startsWith('/') ? next : '/profile')
+  if (session) redirect(next?.startsWith('/') ? next : '/')
 
   return (
     <AuthShell

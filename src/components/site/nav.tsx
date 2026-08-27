@@ -11,6 +11,7 @@ import { cn, initials } from '@/lib/utils'
 type NavUser = { firstName: string; lastName: string; role: 'member' | 'admin' } | null
 
 const LINKS = [
+  { href: '/', label: 'Home' },
   { href: '/activities', label: 'Activities' },
   { href: '/#categories', label: 'What we do' },
   { href: '/#story', label: 'Our story' },

@@ -2,13 +2,17 @@
 
 import { motion } from 'motion/react'
 
-import { initials, instagramUrl, publicName } from '@/lib/utils'
+import { initials, publicName } from '@/lib/utils'
 
+/**
+ * Note what is absent: Instagram handles. They are collected on the form and
+ * shown to organisers, but never published on the public attendee list — the
+ * server query does not even select the column.
+ */
 export type PublicAttendee = {
   id: string
   firstName: string
   lastName: string
-  instagram: string | null
   participationChoice: string | null
   isTibidMember: boolean
 }
@@ -53,7 +57,6 @@ export function AttendeeList({
         <>
           <ul className="mt-5 space-y-2.5">
             {attendees.map((a, i) => {
-              const ig = instagramUrl(a.instagram)
               return (
                 <motion.li
                   key={a.id}
@@ -76,7 +79,9 @@ export function AttendeeList({
                     <span className="block truncate text-sm font-semibold text-deep">
                       {publicName(a.firstName, a.lastName)}
                       {!a.isTibidMember && (
-                        <span className="ml-1.5 text-[11px] font-medium text-kelp">· first time</span>
+                        <span className="ml-1.5 text-[11px] font-medium text-kelp">
+                          · first time
+                        </span>
                       )}
                     </span>
                     {a.participationChoice && (
@@ -85,24 +90,14 @@ export function AttendeeList({
                       </span>
                     )}
                   </span>
-                  {ig && (
-                    <a
-                      href={ig}
-                      target="_blank"
-                      rel="noreferrer noopener"
-                      className="shrink-0 text-xs font-medium text-brand/80 transition hover:text-brand"
-                    >
-                      {a.instagram?.startsWith('@') ? a.instagram : `@${a.instagram}`}
-                    </a>
-                  )}
                 </motion.li>
               )
             })}
           </ul>
 
           <p className="mt-5 border-t border-foam/70 pt-4 text-xs leading-relaxed text-tide/70">
-            Surnames are shortened to an initial. Phone numbers, emails and health notes are only
-            ever visible to the organisers.
+            Surnames are shortened to an initial. Instagram handles, phone numbers, emails and
+            health notes are only ever visible to the organisers.
           </p>
         </>
       )}

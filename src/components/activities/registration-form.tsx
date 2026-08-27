@@ -2,7 +2,7 @@
 
 import { motion } from 'motion/react'
 import Link from 'next/link'
-import { useActionState, useEffect, useRef } from 'react'
+import { useActionState, useCallback, useEffect, useRef, useState } from 'react'
 
 import {
   Alert,
@@ -14,6 +14,14 @@ import {
 } from '@/components/ui/form'
 import { registerForActivityAction, type RegistrationState } from '@/lib/actions/registrations'
 import { GENDERS, GENDER_ORDER } from '@/lib/constants'
+import { SavedDetailsPrompt } from './saved-details-prompt'
+import {
+  EMPTY_PREFILL,
+  forgetSavedDetails,
+  readSavedDetails,
+  snapshotFromForm,
+  writeSavedDetails,
+} from './saved-details'
 
 const initial: RegistrationState = {}
 
@@ -49,6 +57,51 @@ export function RegistrationForm({
   const [state, formAction] = useActionState(registerForActivityAction, initial)
   const topRef = useRef<HTMLDivElement>(null)
 
+  /*
+   * Saved details are offered, never applied silently.
+   *
+   *  - 'looking'  we may have something; a signed-in profile arrives with the
+   *               first render, a guest's local snapshot after mount
+   *  - 'asking'   the prompt is up and the form is deliberately still empty
+   *  - 'used'     they said yes, so the fields carry their details
+   *  - 'fresh'    they said no, or there was nothing to offer
+   */
+  const [phase, setPhase] = useState<'looking' | 'asking' | 'used' | 'fresh'>(
+    prefill ? 'asking' : 'looking',
+  )
+  const [saved, setSaved] = useState<Prefill | null>(prefill)
+
+  useEffect(() => {
+    if (phase !== 'looking') return
+    const local = readSavedDetails()
+    if (local) {
+      setSaved(local)
+      setPhase('asking')
+    } else {
+      setPhase('fresh')
+    }
+  }, [phase])
+
+  const handleForget = useCallback(() => {
+    forgetSavedDetails()
+    setSaved(null)
+    setPhase('fresh')
+  }, [])
+
+  /*
+   * Remember a guest's details for next time. Signed-in members are skipped on
+   * purpose: their profile is already the source of truth, and copying health
+   * notes onto the device would store sensitive data to no end.
+   */
+  function rememberIfGuest(event: React.FormEvent<HTMLFormElement>) {
+    if (isSignedIn) return
+    try {
+      writeSavedDetails(snapshotFromForm(event.currentTarget))
+    } catch {
+      // Never block a registration over a storage failure.
+    }
+  }
+
   // A successful submit redirects to ?joined=… and the confirmation is rendered
   // server-side, so the only state we surface here is validation errors.
   useEffect(() => {
@@ -57,191 +110,216 @@ export function RegistrationForm({
     }
   }, [state])
 
+  // Only fill the fields once they have actually said yes.
+  const values = phase === 'used' && saved ? saved : EMPTY_PREFILL
+
   return (
-    <div ref={topRef} id="register" className="card scroll-mt-28 p-6 sm:p-8">
-      <header className="mb-6">
-        <span className="chip bg-mist text-brand-deeper">Registration</span>
-        <h2 className="mt-3 font-display text-2xl font-extrabold text-deep">
-          Save your spot
-        </h2>
-        <p className="mt-2 text-sm leading-relaxed text-tide">
-          Run, walk or do a little bit of both — there&rsquo;s no race here. What matters is moving
-          your body, having fun and enjoying every step. 🏃‍♀️ 🚶‍♂️ ✨
-        </p>
-      </header>
+    <>
+      <SavedDetailsPrompt
+        open={phase === 'asking' && Boolean(saved)}
+        firstName={saved?.firstName ?? ''}
+        lastName={saved?.lastName ?? ''}
+        email={saved?.email ?? ''}
+        fromProfile={isSignedIn}
+        onUse={() => setPhase('used')}
+        onFresh={() => setPhase('fresh')}
+        onForget={handleForget}
+      />
 
-      {!isSignedIn && (
-        <div className="mb-6 rounded-2xl border border-brand/20 bg-mist/70 p-4 text-sm">
-          <p className="font-semibold text-deep">Signing up as a guest</p>
-          <p className="mt-1 leading-relaxed text-tide">
-            You can register right here without an account.{' '}
-            <Link href={loginHref} className="font-semibold text-brand hover:underline">
-              Sign in
-            </Link>{' '}
-            and every future sign-up fills itself in automatically.
+      <div ref={topRef} id="register" className="card scroll-mt-28 p-6 sm:p-8">
+        <header className="mb-6">
+          <span className="chip bg-mist text-brand-deeper">Registration</span>
+          <h2 className="mt-3 font-display text-2xl font-extrabold text-deep">Save your spot</h2>
+          <p className="mt-2 text-sm leading-relaxed text-tide">
+            Run, walk or do a little bit of both — there&rsquo;s no race here. What matters is
+            moving your body, having fun and enjoying every step. 🏃‍♀️ 🚶‍♂️ ✨
           </p>
-        </div>
-      )}
+        </header>
 
-      <form action={formAction} className="space-y-8">
-        <input type="hidden" name="activityId" value={activityId} />
-
-        {state.errors?._form && <Alert>{state.errors._form}</Alert>}
-
-        {/* ---------------- Attendee information ---------------- */}
-        <FormSection title="Attendee information" step={1}>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <TextField
-              label="First name"
-              name="firstName"
-              autoComplete="given-name"
-              defaultValue={prefill?.firstName}
-              required
-              error={state.errors?.firstName}
-            />
-            <TextField
-              label="Last name"
-              name="lastName"
-              autoComplete="family-name"
-              defaultValue={prefill?.lastName}
-              required
-              error={state.errors?.lastName}
-            />
+        {!isSignedIn && (
+          <div className="mb-6 rounded-2xl border border-brand/20 bg-mist/70 p-4 text-sm">
+            <p className="font-semibold text-deep">Signing up as a guest</p>
+            <p className="mt-1 leading-relaxed text-tide">
+              You can register right here without an account.{' '}
+              <Link href={loginHref} className="font-semibold text-brand hover:underline">
+                Sign in
+              </Link>{' '}
+              and every future sign-up fills itself in automatically.
+            </p>
           </div>
-
-          <RadioCards
-            label="Gender (for statistics)"
-            name="gender"
-            columns={4}
-            required
-            defaultValue={prefill?.gender}
-            options={GENDER_ORDER.map((g) => ({ value: g, label: GENDERS[g] }))}
-            error={state.errors?.gender}
-          />
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <TextField
-              label="Mobile phone number"
-              name="phone"
-              type="tel"
-              inputMode="tel"
-              autoComplete="tel"
-              placeholder="+971 50 123 4567"
-              defaultValue={prefill?.phone}
-              required
-              error={state.errors?.phone}
-            />
-            <TextField
-              label="Email address"
-              name="email"
-              type="email"
-              autoComplete="email"
-              placeholder="example@example.com"
-              defaultValue={prefill?.email}
-              required
-              error={state.errors?.email}
-            />
-          </div>
-
-          <TextField
-            label="Instagram handle"
-            name="instagram"
-            placeholder="@yourhandle"
-            defaultValue={prefill?.instagram}
-            error={state.errors?.instagram}
-            hint="Share your @username if you'd like us to connect with you or tag you in event photos and community moments."
-          />
-        </FormSection>
-
-        {/* ---------------- Event participation ---------------- */}
-        {participationOptions.length > 0 && (
-          <FormSection title="Event participation" step={2}>
-            <RadioCards
-              label={participationLabel ?? 'How will you take part?'}
-              name="participationChoice"
-              columns={participationOptions.length > 2 ? 3 : 2}
-              required
-              options={participationOptions.map((o) => ({ value: o, label: o }))}
-              error={state.errors?.participationChoice}
-            />
-          </FormSection>
         )}
 
-        {/* ---------------- Safety ---------------- */}
-        <FormSection title="Just in case" step={participationOptions.length > 0 ? 3 : 2}>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <TextField
-              label="Emergency contact name"
-              name="emergencyContactName"
-              placeholder="Full name"
-              defaultValue={prefill?.emergencyContactName}
-              error={state.errors?.emergencyContactName}
-            />
-            <TextField
-              label="Emergency contact phone"
-              name="emergencyContactPhone"
-              type="tel"
-              inputMode="tel"
-              placeholder="+971 50 123 4567"
-              defaultValue={prefill?.emergencyContactPhone}
-              error={state.errors?.emergencyContactPhone}
-            />
-          </div>
-
-          <TextArea
-            label="Relevant injury or health condition organisers should know about"
-            name="healthNotes"
-            rows={3}
-            placeholder="Anything you'd want us to know if something happened — otherwise leave blank."
-            defaultValue={prefill?.healthNotes}
-            error={state.errors?.healthNotes}
-            hint="Only the TIBID organisers see this. It is never shown publicly."
-          />
-        </FormSection>
-
-        {/* ---------------- Community status + consent ---------------- */}
-        <FormSection
-          title="Community status & consent"
-          step={participationOptions.length > 0 ? 4 : 3}
+        <form
+          key={phase === 'used' ? 'prefilled' : 'blank'}
+          action={formAction}
+          onSubmit={rememberIfGuest}
+          className="space-y-8"
         >
-          <RadioCards
-            label="Are you already part of the TIBID community?"
-            name="isTibidMember"
-            columns={2}
-            required
-            defaultValue={prefill ? (prefill.isTibidMember ? 'yes' : 'no') : undefined}
-            options={[
-              { value: 'yes', label: 'Yes, I am', emoji: '💙' },
-              { value: 'no', label: 'This is my first time', emoji: '👋' },
-            ]}
-            error={state.errors?.isTibidMember}
-          />
+          <input type="hidden" name="activityId" value={activityId} />
 
-          <CheckboxField
-            name="photoConsent"
-            label="Photo and video consent"
-            description="I agree that TIBID may take photos and video at this activity and use them on the TIBID website and social channels."
-            defaultChecked={prefill?.photoConsent ?? false}
-            error={state.errors?.photoConsent}
-          />
+          {state.errors?._form && <Alert>{state.errors._form}</Alert>}
 
-          <CheckboxField
-            name="agreedToTerms"
-            label="Confirmation"
-            description="I confirm the details above are correct, I'm taking part at my own risk, and I'll follow the organisers' instructions on the day."
-            error={state.errors?.agreedToTerms}
-          />
-        </FormSection>
+          {/* ---------------- Attendee information ---------------- */}
+          <FormSection title="Attendee information" step={1}>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <TextField
+                label="First name"
+                name="firstName"
+                autoComplete="given-name"
+                defaultValue={values.firstName}
+                required
+                error={state.errors?.firstName}
+              />
+              <TextField
+                label="Last name"
+                name="lastName"
+                autoComplete="family-name"
+                defaultValue={values.lastName}
+                required
+                error={state.errors?.lastName}
+              />
+            </div>
 
-        <SubmitButton className="w-full !py-3.5 !text-base" pendingLabel="Saving your spot…">
-          Complete my registration
-        </SubmitButton>
+            <RadioCards
+              label="Gender (for statistics)"
+              name="gender"
+              columns={4}
+              required
+              defaultValue={values.gender}
+              options={GENDER_ORDER.map((g) => ({
+                value: g,
+                label: GENDERS[g],
+              }))}
+              error={state.errors?.gender}
+            />
 
-        <p className="text-center text-xs leading-relaxed text-tide/70">
-          Your details are stored securely and shared only with the TIBID organisers.
-        </p>
-      </form>
-    </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <TextField
+                label="Mobile phone number"
+                name="phone"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                placeholder="+971 50 123 4567"
+                defaultValue={values.phone}
+                required
+                error={state.errors?.phone}
+              />
+              <TextField
+                label="Email address"
+                name="email"
+                type="email"
+                autoComplete="email"
+                placeholder="example@example.com"
+                defaultValue={values.email}
+                required
+                error={state.errors?.email}
+              />
+            </div>
+
+            <TextField
+              label="Instagram handle"
+              name="instagram"
+              placeholder="@yourhandle"
+              defaultValue={values.instagram}
+              error={state.errors?.instagram}
+              hint="Share your @username if you'd like us to connect with you or tag you in event photos and community moments."
+            />
+          </FormSection>
+
+          {/* ---------------- Event participation ---------------- */}
+          {participationOptions.length > 0 && (
+            <FormSection title="Event participation" step={2}>
+              <RadioCards
+                label={participationLabel ?? 'How will you take part?'}
+                name="participationChoice"
+                columns={participationOptions.length > 2 ? 3 : 2}
+                required
+                options={participationOptions.map((o) => ({
+                  value: o,
+                  label: o,
+                }))}
+                error={state.errors?.participationChoice}
+              />
+            </FormSection>
+          )}
+
+          {/* ---------------- Safety ---------------- */}
+          <FormSection title="Just in case" step={participationOptions.length > 0 ? 3 : 2}>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <TextField
+                label="Emergency contact name"
+                name="emergencyContactName"
+                placeholder="Full name"
+                defaultValue={values.emergencyContactName}
+                error={state.errors?.emergencyContactName}
+              />
+              <TextField
+                label="Emergency contact phone"
+                name="emergencyContactPhone"
+                type="tel"
+                inputMode="tel"
+                placeholder="+971 50 123 4567"
+                defaultValue={values.emergencyContactPhone}
+                error={state.errors?.emergencyContactPhone}
+              />
+            </div>
+
+            <TextArea
+              label="Relevant injury or health condition organisers should know about"
+              name="healthNotes"
+              rows={3}
+              placeholder="Anything you'd want us to know if something happened — otherwise leave blank."
+              defaultValue={values.healthNotes}
+              error={state.errors?.healthNotes}
+              hint="Only the TIBID organisers see this. It is never shown publicly."
+            />
+          </FormSection>
+
+          {/* ---------------- Community status + consent ---------------- */}
+          <FormSection
+            title="Community status & consent"
+            step={participationOptions.length > 0 ? 4 : 3}
+          >
+            <RadioCards
+              label="Are you already part of the TIBID community?"
+              name="isTibidMember"
+              columns={2}
+              required
+              defaultValue={phase === 'used' ? (values.isTibidMember ? 'yes' : 'no') : undefined}
+              options={[
+                { value: 'yes', label: 'Yes, I am', emoji: '💙' },
+                { value: 'no', label: 'This is my first time', emoji: '👋' },
+              ]}
+              error={state.errors?.isTibidMember}
+            />
+
+            <CheckboxField
+              name="photoConsent"
+              label="Photo and video consent"
+              description="I agree that TIBID may take photos and video at this activity and use them on the TIBID website and social channels."
+              defaultChecked={values.photoConsent}
+              error={state.errors?.photoConsent}
+            />
+
+            <CheckboxField
+              name="agreedToTerms"
+              label="Confirmation"
+              description="I confirm the details above are correct, I'm taking part at my own risk, and I'll follow the organisers' instructions on the day."
+              error={state.errors?.agreedToTerms}
+            />
+          </FormSection>
+
+          <SubmitButton className="w-full !py-3.5 !text-base" pendingLabel="Saving your spot…">
+            Complete my registration
+          </SubmitButton>
+
+          <p className="text-center text-xs leading-relaxed text-tide/70">
+            Your details are stored securely and shared only with the TIBID organisers.
+          </p>
+        </form>
+      </div>
+    </>
   )
 }
 
@@ -264,7 +342,11 @@ function FormSection({
     <motion.fieldset
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.06 * step, ease: [0.22, 1, 0.36, 1] }}
+      transition={{
+        duration: 0.5,
+        delay: 0.06 * step,
+        ease: [0.22, 1, 0.36, 1],
+      }}
       className="space-y-4"
     >
       <legend className="mb-4 flex w-full items-center gap-3 border-b border-foam/80 pb-3">

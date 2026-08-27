@@ -82,7 +82,8 @@ export async function getPublicAttendees(activityId: string) {
       id: registrations.id,
       firstName: registrations.firstName,
       lastName: registrations.lastName,
-      instagram: registrations.instagram,
+      // Instagram handles are deliberately not selected — the public attendee
+      // list must not expose them. Admins read the full row elsewhere.
       participationChoice: registrations.participationChoice,
       isTibidMember: registrations.isTibidMember,
       createdAt: registrations.createdAt,

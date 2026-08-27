@@ -15,7 +15,7 @@ export function SignUpForm({ next }: { next?: string }) {
     <form action={formAction} className="space-y-5">
       {state.errors?._form && <Alert>{state.errors._form}</Alert>}
 
-      <input type="hidden" name="next" value={next ?? '/profile'} />
+      <input type="hidden" name="next" value={next ?? '/'} />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <TextField

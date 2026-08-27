@@ -14,7 +14,7 @@ export function LoginForm({ next }: { next?: string }) {
     <form action={formAction} className="space-y-4">
       {state.errors?._form && <Alert>{state.errors._form}</Alert>}
 
-      <input type="hidden" name="next" value={next ?? '/profile'} />
+      <input type="hidden" name="next" value={next ?? '/'} />
 
       <TextField
         label="Email address"
