@@ -4,6 +4,7 @@ import { animate, motion, useInView, useReducedMotion } from 'motion/react'
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 
+import { BrandedImage } from '@/components/ui/branded-image'
 import { Reveal, RevealGroup, RevealItem } from '@/components/ui/reveal'
 import { DriftX, Parallax, ScrollSettle } from '@/components/ui/scroll-motion'
 import { DotGrid } from '@/components/ui/waves'
@@ -32,9 +33,9 @@ export function StorySection({ isSignedIn = false }: { isSignedIn?: boolean }) {
               leaderboard — as a rhythm whole cities can fall into together.
             </p>
             <p className="mt-4 max-w-lg leading-relaxed text-tide/85">
-              Every week we meet somewhere across Dubai and Sharjah to run, play, stretch, climb
-              or ride. Some people are training for something. Most people just want to move,
-              breathe and meet someone new. Both are exactly right.
+              Every week we meet somewhere across Dubai and Sharjah to run, play, stretch, climb or
+              ride. Some people are training for something. Most people just want to move, breathe
+              and meet someone new. Both are exactly right.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <a
@@ -237,11 +238,10 @@ export function GallerySection({
           {items.map((item) => (
             <RevealItem key={item.id} className="shrink-0">
               <figure className="group relative h-72 w-64 overflow-hidden rounded-wave sm:h-80 sm:w-72">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <BrandedImage
                   src={item.imageUrl}
                   alt={item.caption ?? ''}
-                  className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  className="h-full w-full transition-transform duration-700 group-hover:scale-105"
                 />
                 {item.caption && (
                   <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-abyss/90 to-transparent p-4 text-sm font-medium text-white opacity-0 transition-opacity duration-400 group-hover:opacity-100">

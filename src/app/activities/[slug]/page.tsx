@@ -6,6 +6,7 @@ import { AttendeeList } from '@/components/activities/attendees'
 import { MapPanel } from '@/components/activities/map-panel'
 import { DifficultyDots } from '@/components/activities/activity-card'
 import { RegistrationForm, type Prefill } from '@/components/activities/registration-form'
+import { BrandedImage } from '@/components/ui/branded-image'
 import { Reveal } from '@/components/ui/reveal'
 import { getCurrentUser } from '@/lib/auth'
 import { CATEGORIES, DIFFICULTIES } from '@/lib/constants'
@@ -93,15 +94,14 @@ export default async function ActivityPage({
       {/* ------------------------------- Hero ------------------------------- */}
       <section className="relative overflow-hidden pt-28">
         <div className="absolute inset-0 h-[34rem]">
-          {activity.coverImage ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={activity.coverImage} alt="" className="h-full w-full object-cover" />
-          ) : (
-            <div
-              className="h-full w-full"
-              style={{ background: `linear-gradient(135deg, ${cat.accent} 0%, #02101F 120%)` }}
-            />
-          )}
+          <BrandedImage
+            src={activity.coverImage}
+            alt=""
+            category={activity.category}
+            priority
+            showLogo={false}
+            className="h-full w-full"
+          />
           {/*
             Explicit stops rather than a two-stop gradient: the title and tagline
             sit around 70-75% of this box, so the fade to the page background is
@@ -202,9 +202,12 @@ export default async function ActivityPage({
                   <div className="card p-6 sm:p-8">
                     <h2 className="font-display text-xl font-bold text-deep">About this session</h2>
                     <div className="mt-4 space-y-3.5 leading-relaxed text-tide">
-                      {activity.description.split(/\n{2,}|\n/).filter(Boolean).map((p, i) => (
-                        <p key={i}>{p}</p>
-                      ))}
+                      {activity.description
+                        .split(/\n{2,}|\n/)
+                        .filter(Boolean)
+                        .map((p, i) => (
+                          <p key={i}>{p}</p>
+                        ))}
                     </div>
 
                     {activity.whatToBring && (
@@ -278,7 +281,6 @@ export default async function ActivityPage({
           </div>
         </div>
       </section>
-
     </>
   )
 }
@@ -312,7 +314,10 @@ function ConfirmedCard({
 
   return (
     <Reveal>
-      <div className="card relative scroll-mt-28 overflow-hidden p-8 text-center sm:p-12" id="register">
+      <div
+        className="card relative scroll-mt-28 overflow-hidden p-8 text-center sm:p-12"
+        id="register"
+      >
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0"

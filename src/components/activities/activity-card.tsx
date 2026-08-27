@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { BrandedImage } from '@/components/ui/branded-image'
 import type { ActivityWithCount } from '@/lib/queries'
 import { CATEGORIES, DIFFICULTIES } from '@/lib/constants'
 import { cn, dayParts, formatPrice, formatTime, isPast } from '@/lib/utils'
@@ -24,44 +25,25 @@ export function ActivityCard({
       href={`/activities/${activity.slug}`}
       className={cn('card card-hover group relative flex flex-col overflow-hidden', className)}
     >
-      {/* Cover */}
+      {/* Cover — the branded placeholder holds the space until (or unless) the
+          real image arrives, so a slow or dead URL never leaves a blank box. */}
       <div className="relative h-44 overflow-hidden">
-        {activity.coverImage ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={activity.coverImage}
-            alt=""
-            className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-        ) : (
-          <div
-            className="h-full w-full transition-transform duration-700 group-hover:scale-105"
-            style={{
-              background: `linear-gradient(135deg, ${cat.accent} 0%, #041E3A 130%)`,
-            }}
-          >
-            <span className="absolute inset-0 grid place-items-center text-6xl opacity-30 transition-transform duration-700 group-hover:scale-110">
-              {cat.emoji}
-            </span>
-            <svg
-              aria-hidden
-              viewBox="0 0 400 80"
-              preserveAspectRatio="none"
-              className="absolute bottom-0 left-0 h-12 w-full text-white/25"
-            >
-              <path
-                fill="currentColor"
-                d="M0,40 C60,10 120,70 200,40 C280,10 340,70 400,40 L400,80 L0,80 Z"
-              />
-            </svg>
-          </div>
-        )}
+        <BrandedImage
+          src={activity.coverImage}
+          alt=""
+          category={activity.category}
+          className="h-full w-full transition-transform duration-700 group-hover:scale-105"
+        />
 
         {/* Date chip */}
         <div className="absolute left-4 top-4 rounded-2xl bg-white/95 px-3 py-2 text-center shadow-[0_8px_24px_-10px_rgba(4,30,58,0.5)] backdrop-blur">
-          <div className="text-[10px] font-bold uppercase tracking-widest text-brand">{weekday}</div>
+          <div className="text-[10px] font-bold uppercase tracking-widest text-brand">
+            {weekday}
+          </div>
           <div className="font-display text-2xl font-bold leading-none text-deep">{day}</div>
-          <div className="text-[10px] font-semibold uppercase tracking-widest text-tide">{month}</div>
+          <div className="text-[10px] font-semibold uppercase tracking-widest text-tide">
+            {month}
+          </div>
         </div>
 
         <div className="absolute right-4 top-4 flex flex-col items-end gap-1.5">
@@ -92,7 +74,9 @@ export function ActivityCard({
         </dl>
 
         <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-foam/70 pt-4">
-          <span className="chip bg-mist text-brand-deeper">{formatPrice(activity.price, activity.currency)}</span>
+          <span className="chip bg-mist text-brand-deeper">
+            {formatPrice(activity.price, activity.currency)}
+          </span>
           <span className="chip bg-mist text-brand-deeper">
             <DifficultyDots level={diff.dots} /> {diff.label}
           </span>
