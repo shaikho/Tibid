@@ -1,5 +1,5 @@
 import { SITE } from '@/lib/constants'
-import { buildDirectionsUrl, buildEmbedUrl } from '@/lib/maps'
+import { buildDirectionsUrl, buildEmbedUrl, buildPinUrl } from '@/lib/maps'
 
 export function MapPanel({
   mapLink,
@@ -17,6 +17,9 @@ export function MapPanel({
    */
   const query = [meetingPoint, location, SITE.country].filter(Boolean).join(', ')
   const embed = buildEmbedUrl(mapLink, query)
+  // Both links are derived from the same coordinates the embed uses, so the
+  // map above and the buttons below can never point at different places.
+  const pin = buildPinUrl(mapLink, query)
   const directions = buildDirectionsUrl(mapLink, query)
 
   return (
@@ -61,19 +64,32 @@ export function MapPanel({
         </div>
       )}
 
-      <div className="p-4">
-        <a
-          href={directions}
-          target="_blank"
-          rel="noreferrer noopener"
-          className="btn btn-ghost w-full"
-        >
-          Open in Google Maps
+      <div className="grid grid-cols-2 gap-2 p-4">
+        <a href={pin} target="_blank" rel="noreferrer noopener" className="btn btn-ghost">
+          Open the pin
           <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden>
             <path
               d="M5 2h7v7M12 2 2 12"
               stroke="currentColor"
               strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </a>
+        <a href={directions} target="_blank" rel="noreferrer noopener" className="btn btn-primary">
+          Directions
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
+            <path
+              d="M8 1.5 14.5 8 8 14.5 1.5 8 8 1.5Z"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M6 9.5v-2a1 1 0 0 1 1-1h3M8.5 5 10 6.5 8.5 8"
+              stroke="currentColor"
+              strokeWidth="1.5"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
