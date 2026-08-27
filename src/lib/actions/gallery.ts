@@ -1,12 +1,12 @@
 'use server'
 
-import { del, put } from '@vercel/blob'
 import { asc, eq, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 
 import { db, galleryItems } from '@/db'
 import { categoryEnum, type Category } from '@/db/schema'
 import { requireAdmin } from '@/lib/auth'
+import { blobConfigured, deleteGalleryImage, putGalleryImage } from '@/lib/blob'
 
 export type GalleryState = {
   ok?: boolean
@@ -16,10 +16,6 @@ export type GalleryState = {
 
 const MAX_BYTES = 8 * 1024 * 1024
 const ALLOWED = ['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/gif']
-
-export async function blobConfigured(): Promise<boolean> {
-  return Boolean(process.env.BLOB_READ_WRITE_TOKEN)
-}
 
 function parseCategory(value: FormDataEntryValue | null): Category | null {
   const v = typeof value === 'string' ? value : ''
@@ -48,7 +44,7 @@ export async function addGalleryItemAction(
   let imageUrl: string | null = null
 
   if (file instanceof File && file.size > 0) {
-    if (!(await blobConfigured())) {
+    if (!blobConfigured()) {
       return {
         error:
           'File uploads need a Vercel Blob store. Create one in Vercel → Storage, or paste an image URL instead.',
@@ -64,12 +60,9 @@ export async function addGalleryItemAction(
     }
 
     try {
-      // addRandomSuffix keeps two photos with the same filename from colliding.
-      const blob = await put(`gallery/${file.name}`, file, {
-        access: 'public',
-        addRandomSuffix: true,
-      })
-      imageUrl = blob.url
+      // Works against either a public or a private Blob store — see @/lib/blob.
+      const stored = await putGalleryImage(file.name, file, file.type)
+      imageUrl = stored.url
     } catch (error) {
       return {
         error: `Upload failed: ${error instanceof Error ? error.message : String(error)}`,
@@ -132,11 +125,7 @@ export async function deleteGalleryItemAction(id: string): Promise<void> {
 
   await db.delete(galleryItems).where(eq(galleryItems.id, id))
 
-  // Best effort: drop the stored file too, but only one we uploaded. A pasted
-  // link may point anywhere, and the row should disappear either way.
-  if ((await blobConfigured()) && row.imageUrl.includes('.public.blob.vercel-storage.com')) {
-    await del(row.imageUrl).catch(() => undefined)
-  }
+  await deleteGalleryImage(row.imageUrl)
 
   revalidatePath('/')
   revalidatePath('/admin/gallery')

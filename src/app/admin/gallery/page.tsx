@@ -1,11 +1,12 @@
 import { GalleryManager } from '@/components/admin/gallery-manager'
-import { blobConfigured } from '@/lib/actions/gallery'
+import { blobConfigured } from '@/lib/blob'
 import { getGallery } from '@/lib/queries'
 
 export const dynamic = 'force-dynamic'
 
 export default async function AdminGalleryPage() {
-  const [items, blobReady] = await Promise.all([getGallery(200).catch(() => []), blobConfigured()])
+  const items = await getGallery(200).catch(() => [])
+  const blobReady = blobConfigured()
 
   return (
     <div className="space-y-5">
