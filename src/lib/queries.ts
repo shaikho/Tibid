@@ -7,11 +7,27 @@ import type { Activity, Category } from '@/db/schema'
 
 export type ActivityWithCount = Activity & { attendeeCount: number }
 
-const goingCount = sql<number>`(
-  select count(*)::int from ${registrations}
-  where ${registrations.activityId} = ${activities.id}
-    and ${registrations.status} = 'going'
-)`
+/*
+ * Attendee counts come from a LEFT JOIN + GROUP BY rather than a correlated
+ * subquery built with the `sql` template.
+ *
+ * The subquery version was silently wrong: drizzle interpolates a column
+ * reference inside a raw `sql` fragment without its table prefix, so
+ * `${registrations.activityId} = ${activities.id}` compiled to
+ * `where "activity_id" = "id"`. Inside the subquery both names resolve against
+ * `registrations`, making it compare a row's activity_id to its own id — never
+ * true, so every count came back 0. A join keeps the reference qualified and
+ * type-checked, and it cannot drift if a column is ever renamed.
+ *
+ * Grouping by the primary key alone is valid in Postgres: every other selected
+ * column is functionally dependent on it.
+ */
+const goingJoin = and(
+  eq(registrations.activityId, activities.id),
+  eq(registrations.status, 'going'),
+)
+
+const attendeeCount = sql<number>`count(${registrations.id})::int`
 
 export async function getUpcomingActivities(options?: {
   limit?: number
@@ -23,9 +39,11 @@ export async function getUpcomingActivities(options?: {
   if (options?.category) conditions.push(eq(activities.category, options.category))
 
   const query = db
-    .select({ activity: activities, attendeeCount: goingCount })
+    .select({ activity: activities, attendeeCount })
     .from(activities)
+    .leftJoin(registrations, goingJoin)
     .where(and(...conditions))
+    .groupBy(activities.id)
     .orderBy(asc(activities.startsAt))
 
   const rows = options?.limit ? await query.limit(options.limit) : await query
@@ -40,9 +58,11 @@ export async function getPastActivities(options?: {
   if (options?.category) conditions.push(eq(activities.category, options.category))
 
   const query = db
-    .select({ activity: activities, attendeeCount: goingCount })
+    .select({ activity: activities, attendeeCount })
     .from(activities)
+    .leftJoin(registrations, goingJoin)
     .where(and(...conditions))
+    .groupBy(activities.id)
     .orderBy(desc(activities.startsAt))
 
   const rows = options?.limit ? await query.limit(options.limit) : await query
@@ -61,8 +81,10 @@ export async function getActivityById(id: string): Promise<Activity | null> {
 
 export async function getAllActivitiesForAdmin(): Promise<ActivityWithCount[]> {
   const rows = await db
-    .select({ activity: activities, attendeeCount: goingCount })
+    .select({ activity: activities, attendeeCount })
     .from(activities)
+    .leftJoin(registrations, goingJoin)
+    .groupBy(activities.id)
     .orderBy(desc(activities.startsAt))
   return rows.map((r) => ({ ...r.activity, attendeeCount: r.attendeeCount }))
 }
@@ -150,10 +172,7 @@ export async function getAdminOverview() {
   const [[upcoming], [totalRegs], [pendingSync], [members], [admins]] = await Promise.all([
     db.select({ n: count() }).from(activities).where(gte(activities.startsAt, now)),
     db.select({ n: count() }).from(registrations),
-    db
-      .select({ n: count() })
-      .from(registrations)
-      .where(eq(registrations.sheetSynced, false)),
+    db.select({ n: count() }).from(registrations).where(eq(registrations.sheetSynced, false)),
     db.select({ n: count() }).from(users).where(eq(users.role, 'member')),
     db.select({ n: count() }).from(users).where(eq(users.role, 'admin')),
   ])
@@ -180,11 +199,12 @@ export async function getAllMembers() {
       role: users.role,
       isTibidMember: users.isTibidMember,
       createdAt: users.createdAt,
-      signupCount: sql<number>`(
-        select count(*)::int from ${registrations} where ${registrations.userId} = ${users.id}
-      )`,
+      // Same qualification trap as the attendee count above — see the note there.
+      signupCount: sql<number>`count(${registrations.id})::int`,
     })
     .from(users)
+    .leftJoin(registrations, eq(registrations.userId, users.id))
+    .groupBy(users.id)
     .orderBy(desc(users.createdAt))
 }
 
