@@ -17,7 +17,8 @@ export const metadata: Metadata = {
   keywords: [
     'TIBID',
     'Dubai running club',
-    'Dubai community',
+    'Sharjah running club',
+    'UAE community',
     'running',
     'volleyball',
     'yoga',

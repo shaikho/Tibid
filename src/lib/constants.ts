@@ -5,12 +5,16 @@ export const SITE = {
   shortName: 'TIBID',
   tagline: 'Inspired by waves',
   description:
-    'TIBID is a Dubai-based movement community. Powered by and embracing movement — building an active, healthy community. All levels welcome to join the journey.',
+    'TIBID is a UAE movement community meeting across Dubai and Sharjah. Powered by and embracing movement — building an active, healthy community. All levels welcome to join the journey.',
   url: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://tibid.vercel.app',
   instagram: 'https://www.instagram.com/tibidcommunity/',
   instagramHandle: '@tibidcommunity',
   tiktok: process.env.NEXT_PUBLIC_TIKTOK_URL ?? '',
+  /** IANA zone for the whole UAE — Dubai and Sharjah share it, with no DST. */
   timezone: 'Asia/Dubai',
+  /** Where the community meets, for copy and map lookups. */
+  region: 'Dubai & Sharjah',
+  country: 'United Arab Emirates',
 } as const
 
 export const CATEGORIES: Record<

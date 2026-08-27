@@ -139,7 +139,7 @@ export function ActivityForm({
             label="Location"
             name="location"
             required
-            placeholder="Dubai Hills Mall — Ground Floor"
+            placeholder="Dubai Hills Mall — Ground Floor / Al Majaz Waterfront, Sharjah"
             defaultValue={activity?.location}
             error={state.errors?.location}
           />
@@ -190,7 +190,7 @@ export function ActivityForm({
       </Panel>
 
       {/* ----------------------- When ----------------------- */}
-      <Panel title="Timing" subtitle="All times are Dubai time (GMT+4).">
+      <Panel title="Timing" subtitle="All times are UAE time (GST, GMT+4) — Dubai and Sharjah alike.">
         <div className="grid gap-4 sm:grid-cols-2">
           <TextField
             label="Starts at"

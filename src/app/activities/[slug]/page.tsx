@@ -167,7 +167,7 @@ export default async function ActivityPage({
                 icon="⏰"
                 label="Starts"
                 value={formatTime(activity.startsAt)}
-                sub={activity.endsAt ? `Until ${formatTime(activity.endsAt)}` : 'Dubai time'}
+                sub={activity.endsAt ? `Until ${formatTime(activity.endsAt)}` : 'UAE time'}
               />
               <Fact
                 icon="💳"

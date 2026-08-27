@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils'
 export const metadata: Metadata = {
   title: 'Activities',
   description:
-    'Running, volleyball, yoga, hiking and horse riding with TIBID Community in Dubai. All levels welcome.',
+    'Running, volleyball, yoga, hiking and horse riding with TIBID Community across Dubai and Sharjah. All levels welcome.',
 }
 
 export const dynamic = 'force-dynamic'

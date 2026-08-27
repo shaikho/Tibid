@@ -1,3 +1,4 @@
+import { SITE } from '@/lib/constants'
 import { buildDirectionsUrl, buildEmbedUrl } from '@/lib/maps'
 
 export function MapPanel({
@@ -9,7 +10,12 @@ export function MapPanel({
   location: string
   meetingPoint: string | null
 }) {
-  const query = [meetingPoint, location, 'Dubai'].filter(Boolean).join(', ')
+  /*
+   * The fallback appends the country, not a city. Appending "Dubai" sent every
+   * Sharjah venue to the wrong emirate whenever an admin had not pasted a map
+   * pin — the geocoder trusts the more specific token it is handed.
+   */
+  const query = [meetingPoint, location, SITE.country].filter(Boolean).join(', ')
   const embed = buildEmbedUrl(mapLink, query)
   const directions = buildDirectionsUrl(mapLink, query)
 

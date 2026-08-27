@@ -29,12 +29,12 @@ export function StorySection({ isSignedIn = false }: { isSignedIn?: boolean }) {
             </h2>
             <p className="mt-6 max-w-lg text-lg leading-relaxed text-tide">
               TIBID started with a simple idea: movement is better shared. Not as a race, not as a
-              leaderboard — as a rhythm a whole city can fall into together.
+              leaderboard — as a rhythm whole cities can fall into together.
             </p>
             <p className="mt-4 max-w-lg leading-relaxed text-tide/85">
-              Every week we meet somewhere in Dubai to run, play, stretch, climb or ride. Some
-              people are training for something. Most people just want to move, breathe and meet
-              someone new. Both are exactly right.
+              Every week we meet somewhere across Dubai and Sharjah to run, play, stretch, climb
+              or ride. Some people are training for something. Most people just want to move,
+              breathe and meet someone new. Both are exactly right.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <a

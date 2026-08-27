@@ -26,7 +26,8 @@ export default async function AdminSettingsPage() {
         <h2 className="font-display text-lg font-bold text-deep">Environment</h2>
         <dl className="mt-4 divide-y divide-foam/70 text-sm">
           <EnvRow label="Site URL" value={SITE.url} />
-          <EnvRow label="Timezone" value={`${SITE.timezone} (all times shown in Dubai time)`} />
+          <EnvRow label="Region" value={SITE.region} />
+          <EnvRow label="Timezone" value={`${SITE.timezone} (all times shown in UAE time)`} />
           <EnvRow label="Instagram" value={SITE.instagram} />
           <EnvRow label="TikTok" value={SITE.tiktok || 'Not set — add NEXT_PUBLIC_TIKTOK_URL'} />
           <EnvRow

@@ -84,7 +84,7 @@ export function dayParts(date: Date | string) {
  *
  * The calendar groups by this. It is always computed on the server and passed
  * to the client as a string: deriving "today" in the browser would give a
- * different answer for anyone outside Dubai and would not match what the server
+ * different answer for anyone outside the UAE and would not match what the server
  * rendered.
  */
 export function dateKey(date: Date | string): string {

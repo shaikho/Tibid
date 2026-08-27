@@ -34,8 +34,8 @@ export function Footer({ isSignedIn = false }: { isSignedIn?: boolean }) {
           <div>
             <Logo invert className="h-11" />
             <p className="mt-5 max-w-xs text-sm leading-relaxed text-foam/80">
-              Inspired by waves. Powered by movement. Building an active, healthy community in
-              Dubai — all levels welcome to join the journey.
+              Inspired by waves. Powered by movement. Building an active, healthy community
+              across Dubai and Sharjah — all levels welcome to join the journey.
             </p>
             <div className="mt-6 flex gap-2">
               <Social href={SITE.instagram} label="Instagram">
@@ -98,7 +98,7 @@ export function Footer({ isSignedIn = false }: { isSignedIn?: boolean }) {
 
         <div className="mt-14 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-6 text-xs text-foam/60 sm:flex-row">
           <p>
-            © {year} {SITE.name}. Made in Dubai 🌊
+            © {year} {SITE.name}. Made in the UAE 🌊
           </p>
           <p className="flex items-center gap-1.5">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-kelp" />

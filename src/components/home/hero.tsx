@@ -59,7 +59,7 @@ export function Hero({ nextActivity }: { nextActivity?: { title: string; slug: s
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-kelp opacity-70" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-kelp" />
           </span>
-          Dubai · All levels welcome
+          Dubai &amp; Sharjah · All levels welcome
         </motion.div>
 
         <h1 className="font-display text-[clamp(2.9rem,10vw,7rem)] font-extrabold leading-[0.92] tracking-tight text-deep">

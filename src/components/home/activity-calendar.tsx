@@ -15,7 +15,7 @@ import { SectionLabel } from './sections'
  * A month view of what's on.
  *
  * Every date is handled as a `YYYY-MM-DD` string computed on the server in
- * Dubai time — including `todayKey`. Nothing here calls `new Date()` for the
+ * UAE time — including `todayKey`. Nothing here calls `new Date()` for the
  * current date, because a browser in another timezone would disagree with the
  * server and highlight the wrong day (and trip a hydration mismatch on the way).
  * The only date arithmetic below is on UTC-constructed dates used purely to lay
