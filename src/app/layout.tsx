@@ -75,7 +75,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           }
         />
         <main id="main">{children}</main>
-        <Footer />
+        <Footer isSignedIn={Boolean(user)} />
       </body>
     </html>
   )

@@ -82,7 +82,13 @@ export const GENDERS: Record<Gender, string> = {
   prefer_not_to_say: 'Prefer not to say',
 }
 
-export const GENDER_ORDER: Gender[] = ['female', 'male', 'other', 'prefer_not_to_say']
+/*
+ * Only these two are offered in the UI. The database enum still holds
+ * 'other' and 'prefer_not_to_say' on purpose — dropping them would need a
+ * migration and would break any record already saved with one, so the GENDERS
+ * map above keeps their labels for display.
+ */
+export const GENDER_ORDER: Gender[] = ['female', 'male']
 
 /** Sensible default participation options per category, offered in the admin form. */
 export const DEFAULT_PARTICIPATION: Record<Category, { label: string; options: string[] }> = {

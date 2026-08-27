@@ -122,7 +122,7 @@ export function Hero({ nextActivity }: { nextActivity?: { title: string; slug: s
       </motion.div>
 
       <div className="absolute inset-x-0 bottom-0">
-        <WaveDivider height={150} to="#F6FBFF" tints={['#B9E5FB', '#6CC5F8']} />
+        <WaveDivider height={210} to="#F6FBFF" tints={['#B9E5FB', '#6CC5F8', '#2E93F0']} />
       </div>
 
       <motion.div
@@ -130,7 +130,7 @@ export function Hero({ nextActivity }: { nextActivity?: { title: string; slug: s
         initial={{ opacity: 0 }}
         animate={{ opacity: [0, 1, 1, 0], y: [0, 8, 8, 0] }}
         transition={{ duration: 2.6, repeat: Number.POSITIVE_INFINITY, delay: 1.4 }}
-        className="absolute bottom-[10.5rem] left-1/2 z-10 -translate-x-1/2 text-brand/60"
+        className="absolute bottom-[14rem] left-1/2 z-10 -translate-x-1/2 text-brand/60"
       >
         <svg width="22" height="30" viewBox="0 0 22 30" fill="none">
           <rect x="1" y="1" width="20" height="28" rx="10" stroke="currentColor" strokeWidth="1.6" />

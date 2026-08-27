@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 
 import { Reveal, RevealGroup, RevealItem } from '@/components/ui/reveal'
+import { DriftX, Parallax, ScrollSettle } from '@/components/ui/scroll-motion'
 import { DotGrid } from '@/components/ui/waves'
 import { CATEGORIES, CATEGORY_ORDER, SITE, VALUES } from '@/lib/constants'
 import type { CommunityStats } from '@/lib/queries'
@@ -13,7 +14,7 @@ import type { CommunityStats } from '@/lib/queries'
 /*  Statement / story                                                          */
 /* -------------------------------------------------------------------------- */
 
-export function StorySection() {
+export function StorySection({ isSignedIn = false }: { isSignedIn?: boolean }) {
   return (
     <section id="story" className="section relative overflow-hidden">
       <DotGrid />
@@ -44,23 +45,25 @@ export function StorySection() {
               >
                 Follow {SITE.instagramHandle}
               </a>
-              <Link href="/signup" className="btn btn-outline">
-                Create your profile
+              <Link href={isSignedIn ? '/activities' : '/signup'} className="btn btn-outline">
+                {isSignedIn ? 'See upcoming activities' : 'Create your profile'}
               </Link>
             </div>
           </Reveal>
 
-          <RevealGroup className="grid gap-4 sm:grid-cols-2">
-            {VALUES.map((value) => (
-              <RevealItem key={value.title}>
-                <div className="card card-hover h-full p-6">
-                  <div className="text-3xl">{value.emoji}</div>
-                  <h3 className="mt-4 font-display text-lg font-bold text-deep">{value.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-tide/85">{value.body}</p>
-                </div>
-              </RevealItem>
-            ))}
-          </RevealGroup>
+          <Parallax speed={26}>
+            <RevealGroup className="grid gap-4 sm:grid-cols-2">
+              {VALUES.map((value) => (
+                <RevealItem key={value.title}>
+                  <div className="card card-hover h-full p-6">
+                    <div className="text-3xl">{value.emoji}</div>
+                    <h3 className="mt-4 font-display text-lg font-bold text-deep">{value.title}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-tide/85">{value.body}</p>
+                  </div>
+                </RevealItem>
+              ))}
+            </RevealGroup>
+          </Parallax>
         </div>
       </div>
     </section>
@@ -93,55 +96,57 @@ export function CategoriesSection() {
           </p>
         </Reveal>
 
-        <RevealGroup className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {CATEGORY_ORDER.map((key) => {
-            const cat = CATEGORIES[key]
-            return (
-              <RevealItem key={key}>
-                <Link
-                  href={`/activities?category=${key}`}
-                  className="group relative flex h-full flex-col overflow-hidden rounded-wave border border-white/10 bg-white/[0.04] p-7 transition-all duration-500 hover:-translate-y-1.5 hover:border-white/25 hover:bg-white/[0.08]"
-                >
-                  <span
-                    aria-hidden
-                    className="absolute -right-10 -top-10 h-32 w-32 rounded-full opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-60"
-                    style={{ background: cat.accent }}
-                  />
-                  <span className="relative text-4xl transition-transform duration-500 group-hover:-translate-y-1 group-hover:scale-110">
-                    {cat.emoji}
-                  </span>
-                  <h3 className="relative mt-5 font-display text-xl font-bold">{cat.label}</h3>
-                  <p className="relative mt-2 flex-1 text-sm leading-relaxed text-foam/70">
-                    {cat.blurb}
-                  </p>
-                  <span className="relative mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-crest">
-                    See sessions
-                    <span className="transition-transform duration-300 group-hover:translate-x-1">
-                      →
+        <ScrollSettle>
+          <RevealGroup className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {CATEGORY_ORDER.map((key) => {
+              const cat = CATEGORIES[key]
+              return (
+                <RevealItem key={key}>
+                  <Link
+                    href={`/activities?category=${key}`}
+                    className="group relative flex h-full flex-col overflow-hidden rounded-wave border border-white/10 bg-white/[0.04] p-7 transition-all duration-500 hover:-translate-y-1.5 hover:border-white/25 hover:bg-white/[0.08]"
+                  >
+                    <span
+                      aria-hidden
+                      className="absolute -right-10 -top-10 h-32 w-32 rounded-full opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-60"
+                      style={{ background: cat.accent }}
+                    />
+                    <span className="relative text-4xl transition-transform duration-500 group-hover:-translate-y-1 group-hover:scale-110">
+                      {cat.emoji}
                     </span>
-                  </span>
-                </Link>
-              </RevealItem>
-            )
-          })}
+                    <h3 className="relative mt-5 font-display text-xl font-bold">{cat.label}</h3>
+                    <p className="relative mt-2 flex-1 text-sm leading-relaxed text-foam/70">
+                      {cat.blurb}
+                    </p>
+                    <span className="relative mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-crest">
+                      See sessions
+                      <span className="transition-transform duration-300 group-hover:translate-x-1">
+                        →
+                      </span>
+                    </span>
+                  </Link>
+                </RevealItem>
+              )
+            })}
 
-          <RevealItem>
-            <div className="flex h-full flex-col justify-center rounded-wave border border-dashed border-white/20 p-7 text-center">
-              <p className="font-display text-lg font-bold text-white">Something else?</p>
-              <p className="mt-2 text-sm leading-relaxed text-foam/70">
-                We add new formats when enough of you ask. Tell us on Instagram.
-              </p>
-              <a
-                href={SITE.instagram}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="mt-5 inline-flex items-center justify-center gap-1.5 text-sm font-semibold text-crest hover:text-white"
-              >
-                Send us a DM →
-              </a>
-            </div>
-          </RevealItem>
-        </RevealGroup>
+            <RevealItem>
+              <div className="flex h-full flex-col justify-center rounded-wave border border-dashed border-white/20 p-7 text-center">
+                <p className="font-display text-lg font-bold text-white">Something else?</p>
+                <p className="mt-2 text-sm leading-relaxed text-foam/70">
+                  We add new formats when enough of you ask. Tell us on Instagram.
+                </p>
+                <a
+                  href={SITE.instagram}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="mt-5 inline-flex items-center justify-center gap-1.5 text-sm font-semibold text-crest hover:text-white"
+                >
+                  Send us a DM →
+                </a>
+              </div>
+            </RevealItem>
+          </RevealGroup>
+        </ScrollSettle>
       </div>
     </section>
   )
@@ -227,25 +232,27 @@ export function GallerySection({
         </Reveal>
       </div>
 
-      <RevealGroup className="mt-12 flex gap-4 overflow-x-auto px-5 pb-4 no-scrollbar md:px-8">
-        {items.map((item) => (
-          <RevealItem key={item.id} className="shrink-0">
-            <figure className="group relative h-72 w-64 overflow-hidden rounded-wave sm:h-80 sm:w-72">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={item.imageUrl}
-                alt={item.caption ?? ''}
-                className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-              />
-              {item.caption && (
-                <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-abyss/90 to-transparent p-4 text-sm font-medium text-white opacity-0 transition-opacity duration-400 group-hover:opacity-100">
-                  {item.caption}
-                </figcaption>
-              )}
-            </figure>
-          </RevealItem>
-        ))}
-      </RevealGroup>
+      <DriftX distance={40}>
+        <RevealGroup className="mt-12 flex gap-4 overflow-x-auto px-5 pb-4 no-scrollbar md:px-8">
+          {items.map((item) => (
+            <RevealItem key={item.id} className="shrink-0">
+              <figure className="group relative h-72 w-64 overflow-hidden rounded-wave sm:h-80 sm:w-72">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={item.imageUrl}
+                  alt={item.caption ?? ''}
+                  className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                />
+                {item.caption && (
+                  <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-abyss/90 to-transparent p-4 text-sm font-medium text-white opacity-0 transition-opacity duration-400 group-hover:opacity-100">
+                    {item.caption}
+                  </figcaption>
+                )}
+              </figure>
+            </RevealItem>
+          ))}
+        </RevealGroup>
+      </DriftX>
     </section>
   )
 }
@@ -254,7 +261,7 @@ export function GallerySection({
 /*  Closing CTA                                                                */
 /* -------------------------------------------------------------------------- */
 
-export function JoinSection() {
+export function JoinSection({ isSignedIn = false }: { isSignedIn?: boolean }) {
   return (
     <section className="section relative">
       <div className="container-tibid">
@@ -275,24 +282,25 @@ export function JoinSection() {
 
             <span className="relative text-5xl">🌊</span>
             <h2 className="relative mt-6 font-display text-[clamp(2rem,5vw,3.5rem)] font-extrabold leading-[1.05]">
-              Join the journey
+              {isSignedIn ? 'See you at the next one' : 'Join the journey'}
             </h2>
             <p className="relative mx-auto mt-5 max-w-xl text-balance text-lg leading-relaxed text-white/85">
-              Create a profile once. After that, joining any activity takes about ten seconds —
-              your details fill themselves in.
+              {isSignedIn
+                ? 'Your details are saved, so joining an activity takes about ten seconds. Pick the one your body is asking for this week.'
+                : 'Create a profile once. After that, joining any activity takes about ten seconds — your details fill themselves in.'}
             </p>
             <div className="relative mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Link
-                href="/signup"
+                href="/activities"
                 className="btn w-full !bg-white !px-8 !py-3.5 !text-base !text-brand-deeper hover:-translate-y-0.5 sm:w-auto"
               >
-                Create your profile
+                Browse activities
               </Link>
               <Link
-                href="/activities"
+                href={isSignedIn ? '/profile#my-activities' : '/signup'}
                 className="btn w-full border-2 border-white/40 !px-8 !py-3.5 !text-base text-white hover:border-white sm:w-auto"
               >
-                Browse activities
+                {isSignedIn ? 'My activities' : 'Create your profile'}
               </Link>
             </div>
           </div>
@@ -304,13 +312,7 @@ export function JoinSection() {
 
 /* -------------------------------------------------------------------------- */
 
-export function SectionLabel({
-  children,
-  dark,
-}: {
-  children: React.ReactNode
-  dark?: boolean
-}) {
+export function SectionLabel({ children, dark }: { children: React.ReactNode; dark?: boolean }) {
   return (
     <span
       className={`inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] ${

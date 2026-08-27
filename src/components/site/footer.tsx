@@ -5,7 +5,7 @@ import { CATEGORIES, CATEGORY_ORDER, SITE } from '@/lib/constants'
 
 const year = new Date().getFullYear()
 
-export function Footer() {
+export function Footer({ isSignedIn = false }: { isSignedIn?: boolean }) {
   return (
     <footer className="relative overflow-hidden bg-abyss text-mist">
       <div
@@ -62,10 +62,20 @@ export function Footer() {
 
           <FooterCol title="Community">
             <FooterLink href="/activities">Upcoming events</FooterLink>
+            <FooterLink href="/#calendar">Calendar</FooterLink>
             <FooterLink href="/#story">Our story</FooterLink>
             <FooterLink href="/#gallery">Moments</FooterLink>
-            <FooterLink href="/signup">Create a profile</FooterLink>
-            <FooterLink href="/login">Sign in</FooterLink>
+            {isSignedIn ? (
+              <>
+                <FooterLink href="/profile">My profile</FooterLink>
+                <FooterLink href="/profile#my-activities">My activities</FooterLink>
+              </>
+            ) : (
+              <>
+                <FooterLink href="/signup">Create a profile</FooterLink>
+                <FooterLink href="/login">Sign in</FooterLink>
+              </>
+            )}
           </FooterCol>
 
           <div>
@@ -73,11 +83,15 @@ export function Footer() {
               Move with us
             </h3>
             <p className="mt-4 text-sm leading-relaxed text-foam/80">
-              New activities go up every week. Create a profile once and signing up afterwards takes
-              about ten seconds.
+              {isSignedIn
+                ? 'New activities go up every week. Your details are saved, so signing up takes about ten seconds.'
+                : 'New activities go up every week. Create a profile once and signing up afterwards takes about ten seconds.'}
             </p>
-            <Link href="/signup" className="btn btn-primary mt-5 !bg-white !bg-none !text-brand-deeper hover:!shadow-none">
-              Create your profile
+            <Link
+              href={isSignedIn ? '/activities' : '/signup'}
+              className="btn btn-primary mt-5 !bg-white !bg-none !text-brand-deeper hover:!shadow-none"
+            >
+              {isSignedIn ? 'See what’s on' : 'Create your profile'}
             </Link>
           </div>
         </div>

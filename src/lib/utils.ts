@@ -79,6 +79,23 @@ export function dayParts(date: Date | string) {
   }
 }
 
+/**
+ * A stable YYYY-MM-DD key for a date, in the community's timezone.
+ *
+ * The calendar groups by this. It is always computed on the server and passed
+ * to the client as a string: deriving "today" in the browser would give a
+ * different answer for anyone outside Dubai and would not match what the server
+ * rendered.
+ */
+export function dateKey(date: Date | string): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date(date))
+}
+
 export function isPast(date: Date | string): boolean {
   return new Date(date).getTime() < Date.now()
 }

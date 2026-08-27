@@ -69,6 +69,21 @@ export async function getPastActivities(options?: {
   return rows.map((r) => ({ ...r.activity, attendeeCount: r.attendeeCount }))
 }
 
+/** Published activities starting inside a window — feeds the home calendar. */
+export async function getCalendarActivities(from: Date, to: Date): Promise<Activity[]> {
+  return db
+    .select()
+    .from(activities)
+    .where(
+      and(
+        eq(activities.published, true),
+        gte(activities.startsAt, from),
+        lt(activities.startsAt, to),
+      ),
+    )
+    .orderBy(asc(activities.startsAt))
+}
+
 export async function getActivityBySlug(slug: string): Promise<Activity | null> {
   const [row] = await db.select().from(activities).where(eq(activities.slug, slug)).limit(1)
   return row ?? null
