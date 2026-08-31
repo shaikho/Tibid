@@ -15,6 +15,14 @@ export type SessionPayload = {
   name: string
 }
 
+/**
+ * A verified session, plus when it was issued. `issuedAt` is the standard JWT
+ * `iat` claim in whole seconds; it is what lets a password reset invalidate
+ * sessions that were signed before it, without keeping a server-side list of
+ * every session ever issued.
+ */
+export type VerifiedSession = SessionPayload & { issuedAt: number }
+
 function secretKey() {
   const secret = process.env.AUTH_SECRET
   if (!secret || secret.length < 32) {
@@ -36,7 +44,7 @@ export async function signSession(payload: SessionPayload): Promise<string> {
     .sign(secretKey())
 }
 
-export async function verifySession(token: string | undefined): Promise<SessionPayload | null> {
+export async function verifySession(token: string | undefined): Promise<VerifiedSession | null> {
   if (!token) return null
   try {
     const { payload } = await jwtVerify(token, secretKey(), {
@@ -49,6 +57,7 @@ export async function verifySession(token: string | undefined): Promise<SessionP
       email: String(payload.email ?? ''),
       role: payload.role === 'admin' ? 'admin' : 'member',
       name: String(payload.name ?? ''),
+      issuedAt: typeof payload.iat === 'number' ? payload.iat : 0,
     }
   } catch {
     return null

@@ -57,6 +57,21 @@ export const profileSchema = z.object({
   bio: trimmed(300).optional(),
 })
 
+export const forgotPasswordSchema = z.object({
+  email: emailSchema,
+})
+
+export const passwordResetSchema = z
+  .object({
+    token: z.string().min(20, 'That reset link is not valid').max(200),
+    newPassword: passwordSchema,
+    confirmPassword: z.string(),
+  })
+  .refine((v) => v.newPassword === v.confirmPassword, {
+    message: 'The two passwords do not match',
+    path: ['confirmPassword'],
+  })
+
 export const passwordChangeSchema = z
   .object({
     currentPassword: z.string().min(1, 'Enter your current password'),

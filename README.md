@@ -152,6 +152,48 @@ see it in the admin. **Sync pending rows** is safe to run as many times as you l
 
 ---
 
+## Password resets
+
+Members who forget their password click **Forgot your password** on the sign-in page, type their
+email, and get a link that lets them choose a new one. The link works once and expires after an
+hour, and using it signs them out of every other device.
+
+Until you configure a provider, the page says so honestly and asks them to contact an organiser —
+nothing is silently swallowed.
+
+### Setting it up with Brevo (free, no domain needed)
+
+1. Sign up at [brevo.com](https://www.brevo.com) — the free plan sends 300 emails a day, which is
+   far more than resets will ever need.
+2. **Senders, Domains & Dedicated IPs → Senders → Add a sender.** Use the community's email
+   address. Brevo emails it a confirmation link; click it.
+3. **SMTP & API → API Keys → Generate a new API key.**
+4. In Vercel → Settings → Environment Variables, add:
+
+   | Variable | Value |
+   | --- | --- |
+   | `BREVO_API_KEY` | the key from step 3 |
+   | `EMAIL_FROM` | the address you verified in step 2 |
+   | `EMAIL_FROM_NAME` | `TIBID Community` |
+
+5. Redeploy. Test it on your own account before telling anyone else it exists.
+
+> **A caveat worth knowing.** Sending from a free webmail address (`@gmail.com`, `@outlook.com`)
+> cannot be DKIM-signed, because you do not control that domain's DNS. Brevo will show a warning
+> next to the sender, and some resets will land in spam — the page tells members to check there.
+> Buying a domain and using it for both the site and the sender is the fix, and it is the single
+> biggest deliverability improvement available. With a domain, switch to
+> [Resend](https://resend.com) instead: set `RESEND_API_KEY` in place of `BREVO_API_KEY`, verify
+> the domain (three DNS records), and remove the spam caveat entirely.
+
+### Using a different provider
+
+Everything that sends email goes through `sendMail()` in `src/lib/email.ts`. Adding a provider is
+one function there and one line in `activeProvider()` — nothing else in the app knows or cares
+which service delivers the message.
+
+---
+
 ## Making someone else an admin
 
 Add their email to `ADMIN_EMAILS` in Vercel *before* they sign up. To promote an account that
@@ -258,6 +300,8 @@ src/
 │   ├── activities/                 Public calendar + activity detail & registration
 │   ├── admin/                      Organiser dashboard (guarded by middleware + server checks)
 │   ├── login/  signup/  profile/   Member accounts
+│   ├── forgot-password/            Request a reset link
+│   ├── reset-password/             Choose a new password from a link
 │   └── api/
 │       ├── admin/export/           CSV exports
 │       └── auth/logout/
@@ -271,8 +315,11 @@ src/
 │   ├── schema.ts                   Drizzle schema — users, activities, registrations, gallery
 │   └── index.ts                    Driver selection + lazy connection
 ├── lib/
-│   ├── actions/                    Server actions (auth, activities, registrations)
+│   ├── actions/                    Server actions (auth, activities, registrations, resets)
 │   ├── auth.ts  session.ts  password.ts
+│   ├── email.ts                    Provider-agnostic sender (Brevo, Resend, console)
+│   ├── emails/                     Email templates
+│   ├── password-reset.ts           Token issue / check / consume
 │   ├── google-sheets.ts            Service-account JWT → Sheets API v4 append
 │   ├── maps.ts                     Google Maps link → embeddable URL
 │   ├── queries.ts                  Read queries
@@ -296,6 +343,15 @@ src/
 - CSV exports are admin-only and return `403` otherwise.
 - All user input is validated server-side with Zod; client-side `required` attributes are
   convenience only.
+- Password reset tokens are 256 bits of `randomBytes`. Only their SHA-256 is stored, so a database
+  backup cannot be turned into working reset links. Each is single-use, expires after an hour, and
+  asking for a new one retires the previous one.
+- The forgot-password form gives the same answer for every address, and takes the same amount of
+  time either way, so it cannot be used to discover who has a profile.
+- Resets are limited to 5 per address and 12 per IP address per hour.
+- Changing or resetting a password invalidates every session issued before it. Sessions are
+  stateless JWTs, so this compares the token's `iat` against `users.password_changed_at` rather
+  than keeping a server-side session table.
 
 ---
 

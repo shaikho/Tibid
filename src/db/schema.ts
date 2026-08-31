@@ -72,6 +72,15 @@ export const users = pgTable(
     avatarUrl: text('avatar_url'),
     bio: text('bio'),
 
+    /*
+     * Stamped every time the password changes. Sessions are stateless JWTs, so
+     * there is no server-side list of them to delete — instead any session
+     * issued before this moment is treated as signed out (see getCurrentUser).
+     * That is what makes "reset my password" actually kick out whoever else was
+     * signed in, which is the whole point of resetting it.
+     */
+    passwordChangedAt: timestamp('password_changed_at', { withTimezone: true }),
+
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -203,12 +212,51 @@ export const galleryItems = pgTable('gallery_items', {
 })
 
 /* -------------------------------------------------------------------------- */
+/*  Password reset tokens                                                      */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Only the SHA-256 of the token is stored, never the token itself. The raw
+ * value exists in exactly two places: the link in the email, and the URL the
+ * member clicks. So a leaked database backup cannot be used to reset anyone's
+ * password — the same reason password hashes are stored rather than passwords.
+ *
+ * `usedAt` makes a token single-use. It is kept rather than deleted so a second
+ * click on the same link can say "this link has already been used" instead of
+ * the vaguer "invalid link".
+ */
+export const passwordResetTokens = pgTable(
+  'password_reset_tokens',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    tokenHash: text('token_hash').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    usedAt: timestamp('used_at', { withTimezone: true }),
+    requestedIp: text('requested_ip'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('password_reset_tokens_hash_unique').on(t.tokenHash),
+    index('password_reset_tokens_user_idx').on(t.userId),
+    index('password_reset_tokens_created_idx').on(t.createdAt),
+  ],
+)
+
+/* -------------------------------------------------------------------------- */
 /*  Relations                                                                  */
 /* -------------------------------------------------------------------------- */
 
 export const usersRelations = relations(users, ({ many }) => ({
   registrations: many(registrations),
   createdActivities: many(activities),
+  passwordResetTokens: many(passwordResetTokens),
+}))
+
+export const passwordResetTokensRelations = relations(passwordResetTokens, ({ one }) => ({
+  user: one(users, { fields: [passwordResetTokens.userId], references: [users.id] }),
 }))
 
 export const activitiesRelations = relations(activities, ({ one, many }) => ({
@@ -232,6 +280,7 @@ export type NewActivity = typeof activities.$inferInsert
 export type Registration = typeof registrations.$inferSelect
 export type NewRegistration = typeof registrations.$inferInsert
 export type GalleryItem = typeof galleryItems.$inferSelect
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect
 
 export type Category = (typeof categoryEnum.enumValues)[number]
 export type Difficulty = (typeof difficultyEnum.enumValues)[number]

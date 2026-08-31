@@ -20,7 +20,20 @@ export const getCurrentUser = cache(async (): Promise<User | null> => {
   if (!session) return null
 
   const [user] = await db.select().from(users).where(eq(users.id, session.sub)).limit(1)
-  return user ?? null
+  if (!user) return null
+
+  /*
+   * Changing the password signs out everywhere else. There is no server-side
+   * session table to delete from — the session is a self-contained JWT — so
+   * instead any session signed before the password changed is treated as gone.
+   * `iat` is in seconds and the stamp is truncated to the second, so the
+   * session created by the reset itself is never caught by its own rule.
+   */
+  if (user.passwordChangedAt && session.issuedAt * 1000 < user.passwordChangedAt.getTime()) {
+    return null
+  }
+
+  return user
 })
 
 export async function requireUser(redirectTo = '/login'): Promise<User> {

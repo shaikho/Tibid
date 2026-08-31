@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useActionState } from 'react'
 
 import { Alert, SubmitButton, TextField } from '@/components/ui/form'
@@ -26,15 +27,22 @@ export function LoginForm({ next }: { next?: string }) {
         error={state.errors?.email}
       />
 
-      <TextField
-        label="Password"
-        name="password"
-        type="password"
-        autoComplete="current-password"
-        placeholder="••••••••"
-        required
-        error={state.errors?.password}
-      />
+      <div>
+        <TextField
+          label="Password"
+          name="password"
+          type="password"
+          autoComplete="current-password"
+          placeholder="••••••••"
+          required
+          error={state.errors?.password}
+        />
+        <p className="mt-2 text-right text-xs">
+          <Link href="/forgot-password" className="font-medium text-tide hover:text-brand">
+            Forgot your password?
+          </Link>
+        </p>
+      </div>
 
       <SubmitButton className="w-full !py-3" pendingLabel="Signing you in…">
         Sign in

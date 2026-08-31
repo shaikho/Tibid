@@ -180,13 +180,23 @@ export async function changePasswordAction(
   const valid = await verifyPassword(parsed.data.currentPassword, user.passwordHash)
   if (!valid) return { errors: { currentPassword: 'That is not your current password.' } }
 
-  await db
+  const now = new Date()
+  const [updated] = await db
     .update(users)
     .set({
       passwordHash: await hashPassword(parsed.data.newPassword),
-      updatedAt: new Date(),
+      // Truncated to the second so the session re-issued below, whose `iat` is
+      // in whole seconds, is not invalidated by the change that created it.
+      passwordChangedAt: new Date(Math.floor(now.getTime() / 1000) * 1000),
+      updatedAt: now,
     })
     .where(eq(users.id, user.id))
+    .returning()
 
-  return { ok: true, message: 'Password updated.' }
+  // Changing the password signs out every other device. This one stays signed
+  // in — being asked to log in again on the machine you just used is a bug, not
+  // a security feature.
+  if (updated) await createSessionCookie(updated)
+
+  return { ok: true, message: 'Password updated. Any other device has been signed out.' }
 }

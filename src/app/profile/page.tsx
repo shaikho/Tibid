@@ -13,9 +13,16 @@ import { dayParts, formatTime, initials, isPast } from '@/lib/utils'
 export const metadata: Metadata = { title: 'My profile' }
 export const dynamic = 'force-dynamic'
 
-export default async function ProfilePage() {
+export default async function ProfilePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ password?: string }>
+}) {
   const user = await requireUser('/login?next=/profile')
-  const rows = await getMyRegistrations(user.id).catch(() => [])
+  const [rows, { password }] = await Promise.all([
+    getMyRegistrations(user.id).catch(() => []),
+    searchParams,
+  ])
 
   const upcoming = rows.filter(
     (r) => !isPast(r.activity.startsAt) && r.registration.status !== 'cancelled',
@@ -29,6 +36,20 @@ export default async function ProfilePage() {
       <section className="relative overflow-hidden bg-gradient-to-b from-mist to-shell pb-12 pt-36">
         <OceanBackdrop />
         <div className="container-tibid relative">
+          {/* Confirms the reset landed. Rendered server-side from the redirect
+              so it survives revalidation rather than flashing and vanishing. */}
+          {password === 'updated' && (
+            <Reveal className="mb-8">
+              <p
+                role="status"
+                className="rounded-xl border border-kelp/30 bg-kelp/8 px-4 py-3 text-sm font-medium text-kelp"
+              >
+                Your password has been updated and you are signed in. Anywhere else you were signed
+                in has been signed out.
+              </p>
+            </Reveal>
+          )}
+
           <Reveal className="flex flex-wrap items-center gap-5">
             <span className="grid h-20 w-20 shrink-0 place-items-center rounded-full bg-gradient-to-br from-brand to-brand-deeper font-display text-2xl font-bold text-white shadow-tide">
               {initials(user.firstName, user.lastName)}
