@@ -8,7 +8,16 @@ import { loginAction, type FormState } from '@/lib/actions/auth'
 
 const initial: FormState = {}
 
-export function LoginForm({ next }: { next?: string }) {
+export function LoginForm({
+  next,
+  helpHref,
+  helpLabel,
+}: {
+  next?: string
+  /** Where "forgot your password" sends people — set in Admin → Settings. */
+  helpHref: string
+  helpLabel: string
+}) {
   const [state, formAction] = useActionState(loginAction, initial)
   const [askingForHelp, setAskingForHelp] = useState(false)
 
@@ -62,7 +71,12 @@ export function LoginForm({ next }: { next?: string }) {
         We keep you signed in for 30 days on this device so you never have to retype your details.
       </p>
 
-      <ForgotPasswordModal open={askingForHelp} onClose={() => setAskingForHelp(false)} />
+      <ForgotPasswordModal
+        open={askingForHelp}
+        onClose={() => setAskingForHelp(false)}
+        helpHref={helpHref}
+        helpLabel={helpLabel}
+      />
     </form>
   )
 }

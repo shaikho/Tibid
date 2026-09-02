@@ -4,8 +4,8 @@ import Link from 'next/link'
 import { AuthShell } from '@/components/auth/auth-shell'
 import { ResetPasswordForm } from '@/app/reset-password/reset-password-form'
 import { Alert } from '@/components/ui/form'
-import { SITE } from '@/lib/constants'
 import { checkResetToken } from '@/lib/password-reset'
+import { getSupportContact } from '@/lib/settings'
 
 export const metadata: Metadata = {
   title: 'Choose a new password',
@@ -26,6 +26,7 @@ export default async function ResetPasswordPage({
 }) {
   const { token } = await searchParams
   const check = await checkResetToken(token).catch(() => ({ status: 'unknown' as const }))
+  const support = await getSupportContact()
 
   if (check.status !== 'valid') {
     const reason =
@@ -55,12 +56,12 @@ export default async function ResetPasswordPage({
             works in the meantime, if you remember it.
           </p>
           <a
-            href={SITE.instagram}
+            href={support.href}
             target="_blank"
             rel="noreferrer noopener"
             className="btn-primary w-full !py-3"
           >
-            Message us on Instagram
+            {support.label}
           </a>
         </div>
       </AuthShell>

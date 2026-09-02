@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { LoginForm } from '@/app/login/login-form'
 import { AuthShell } from '@/components/auth/auth-shell'
 import { getCurrentUser } from '@/lib/auth'
+import { getSupportContact } from '@/lib/settings'
 
 export const metadata: Metadata = { title: 'Sign in' }
 export const dynamic = 'force-dynamic'
@@ -21,8 +22,11 @@ export default async function LoginPage({
    * them here, and the two would redirect at each other forever. "Signed in"
    * has to mean the same thing here as it does everywhere else.
    */
-  const session = await getCurrentUser().catch(() => null)
-  const { next } = await searchParams
+  const [session, { next }, support] = await Promise.all([
+    getCurrentUser().catch(() => null),
+    searchParams,
+    getSupportContact(),
+  ])
 
   if (session) redirect(next?.startsWith('/') ? next : '/')
 
@@ -39,7 +43,7 @@ export default async function LoginPage({
         </>
       }
     >
-      <LoginForm next={next} />
+      <LoginForm next={next} helpHref={support.href} helpLabel={support.label} />
     </AuthShell>
   )
 }

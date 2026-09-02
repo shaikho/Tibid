@@ -1,21 +1,33 @@
 import { SheetsPanel } from '@/components/admin/sheets-panel'
+import { SupportContactPanel } from '@/components/admin/support-contact-panel'
 import { SITE } from '@/lib/constants'
 import { sheetsConfigured, testSheetsConnection } from '@/lib/google-sheets'
 import { getAdminOverview } from '@/lib/queries'
+import { formatWhatsapp, getSupportContact } from '@/lib/settings'
 
 export const dynamic = 'force-dynamic'
 
 export default async function AdminSettingsPage() {
   const configured = sheetsConfigured()
-  const [status, overview] = await Promise.all([
+  const [status, overview, support] = await Promise.all([
     configured
       ? testSheetsConnection().catch((e) => ({ ok: false, message: String(e) }))
       : Promise.resolve(null),
     getAdminOverview().catch(() => null),
+    getSupportContact(),
   ])
 
   return (
     <div className="max-w-3xl space-y-6">
+      <SupportContactPanel
+        whatsapp={support.whatsapp}
+        name={support.name}
+        currentHref={support.href}
+        channel={support.channel}
+        currentLabel={support.label}
+        prettyNumber={support.whatsapp ? formatWhatsapp(support.whatsapp) : null}
+      />
+
       <SheetsPanel
         configured={configured}
         status={status}
@@ -29,6 +41,14 @@ export default async function AdminSettingsPage() {
           <EnvRow label="Region" value={SITE.region} />
           <EnvRow label="Timezone" value={`${SITE.timezone} (all times shown in UAE time)`} />
           <EnvRow label="Instagram" value={SITE.instagram} />
+          <EnvRow
+            label="Reset contact"
+            value={
+              support.channel === 'whatsapp'
+                ? `WhatsApp ${formatWhatsapp(support.whatsapp as string)}`
+                : 'Not set — falling back to Instagram'
+            }
+          />
           <EnvRow label="TikTok" value={SITE.tiktok || 'Not set — add NEXT_PUBLIC_TIKTOK_URL'} />
           <EnvRow
             label="Database"

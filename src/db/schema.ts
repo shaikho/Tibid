@@ -212,6 +212,26 @@ export const galleryItems = pgTable('gallery_items', {
 })
 
 /* -------------------------------------------------------------------------- */
+/*  App settings — the handful of things organisers can change without a deploy */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Key/value rather than a column per setting, so adding one is a line of code
+ * instead of a migration. Everything here is small, public-facing copy and
+ * contact details that an organiser should be able to change themselves.
+ *
+ * Not for secrets. API keys and connection strings stay in environment
+ * variables, where they are not readable from an admin page and not sitting in
+ * a database backup.
+ */
+export const appSettings = pgTable('app_settings', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedBy: uuid('updated_by').references(() => users.id, { onDelete: 'set null' }),
+})
+
+/* -------------------------------------------------------------------------- */
 /*  Password reset tokens                                                      */
 /* -------------------------------------------------------------------------- */
 
@@ -286,6 +306,7 @@ export type Registration = typeof registrations.$inferSelect
 export type NewRegistration = typeof registrations.$inferInsert
 export type GalleryItem = typeof galleryItems.$inferSelect
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect
+export type AppSetting = typeof appSettings.$inferSelect
 
 export type Category = (typeof categoryEnum.enumValues)[number]
 export type Difficulty = (typeof difficultyEnum.enumValues)[number]

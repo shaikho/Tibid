@@ -10,15 +10,31 @@ import { SITE } from '@/lib/constants'
  *
  * There is no self-serve email route, so this modal has one job: make the next
  * step obvious enough that nobody is left staring at a login screen wondering
- * whether the site is broken. It names who to ask, gives a tap-through to
- * Instagram, and says what will come back — a one-time link that expires in an
- * hour — so the message that arrives later is expected rather than suspicious.
+ * whether the site is broken. It names who to ask, gives a one-tap way to reach
+ * them, and says what will come back — a one-time link that expires in an hour
+ * — so the message that arrives later is expected rather than suspicious.
  *
  * A modal rather than a page because there is nothing to submit. A page implies
  * a form; this is an instruction, and it belongs over the login screen the
  * member is already looking at.
+ *
+ * Where the button points comes from Admin → Settings, not from a constant.
+ * Whoever is covering resets changes — someone travels, someone hands the role
+ * over — and a number baked into the source is one that stays wrong until the
+ * next deploy.
  */
-export function ForgotPasswordModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function ForgotPasswordModal({
+  open,
+  onClose,
+  helpHref,
+  helpLabel,
+}: {
+  open: boolean
+  onClose: () => void
+  /** wa.me link when an organiser has set a number, Instagram otherwise. */
+  helpHref: string
+  helpLabel: string
+}) {
   const closeRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
 
@@ -122,12 +138,12 @@ export function ForgotPasswordModal({ open, onClose }: { open: boolean; onClose:
 
             <div className="relative mt-7 flex flex-col gap-2.5">
               <a
-                href={SITE.instagram}
+                href={helpHref}
                 target="_blank"
                 rel="noreferrer noopener"
                 className="btn btn-primary w-full !py-3"
               >
-                Message us on Instagram
+                {helpLabel}
               </a>
               <button
                 ref={closeRef}
@@ -140,8 +156,9 @@ export function ForgotPasswordModal({ open, onClose }: { open: boolean; onClose:
             </div>
 
             <p className="relative mt-5 text-xs leading-relaxed text-tide/70">
-              Tell us the email on your profile. The link we send works once and expires after an
-              hour, so open it when you have a minute to choose a new password.
+              Tell us the email on your profile — the message is already written for you. The link
+              we send back works once and expires after an hour, so open it when you have a minute
+              to choose a new password.
             </p>
           </motion.div>
         </motion.div>
