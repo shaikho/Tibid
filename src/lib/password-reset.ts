@@ -8,9 +8,13 @@ import { db, passwordResetTokens, users, type User } from '@/db'
 import { SITE } from '@/lib/constants'
 
 /**
- * The mechanics behind "forgot my password".
+ * The mechanics behind a password reset.
  *
- * Three rules shape everything here:
+ * Links are issued by an organiser from the admin Members page and handed to
+ * the member over WhatsApp or Instagram. There is no self-serve email route —
+ * see `src/lib/actions/password-reset.ts` for why.
+ *
+ * Two rules shape everything here:
  *
  * 1. The database never sees the token. Only its SHA-256 is stored, so a
  *    leaked backup cannot be turned into a set of working reset links — the
@@ -18,26 +22,19 @@ import { SITE } from '@/lib/constants'
  *    SHA-256 without a salt is right here, unlike for passwords: the token is
  *    256 bits of `randomBytes`, so there is nothing to guess or precompute.
  *
- * 2. A link works once, and not for long. Reset emails sit in inboxes for
- *    years; a link that still works months later is a spare key under the mat.
- *
- * 3. The page never says whether an email is registered. "If that address has
- *    a profile, the link is on its way" is the same answer either way, so the
- *    form cannot be used to find out who is in the community.
+ * 2. A link works once, and not for long. A link pasted into a group chat and
+ *    still working next month is a spare key under the mat.
  */
 
-/** Long enough to walk to a laptop, short enough to be useless once archived. */
+/** Long enough to pass on and act on, short enough to be useless once stale. */
 export const TOKEN_TTL_MINUTES = 60
 
 /**
- * Per address, per hour. Stops the form being used to spam someone's inbox,
- * while leaving room for the ordinary sequence of not seeing the email,
- * checking spam, and asking again.
+ * A ceiling even on organiser-issued links. Nobody legitimately needs six links
+ * for one member in an hour; hitting this means a stuck loop or a mistake, and
+ * stopping is the friendlier failure.
  */
 const MAX_REQUESTS_PER_USER_PER_HOUR = 5
-
-/** Per source address, per hour. Stops one script enumerating many addresses. */
-const MAX_REQUESTS_PER_IP_PER_HOUR = 12
 
 export type TokenCheck =
   | { status: 'valid'; userId: string; firstName: string }
@@ -102,22 +99,16 @@ export type IssueResult =
 /**
  * Creates a reset link for an email address, if it belongs to somebody.
  *
- * The caller gets told which of the three things happened so it can log
- * usefully, but must show the member the same message in every case.
+ * `issuedByAdminId` is recorded rather than checked: this is only reachable
+ * from an admin-guarded action, so the value is an audit trail — "who handed
+ * out a link for this member, and when" — not an authorisation decision.
  */
-export async function issueResetToken(email: string): Promise<IssueResult> {
+export async function issueResetToken(
+  email: string,
+  { issuedByAdminId }: { issuedByAdminId?: string } = {},
+): Promise<IssueResult> {
   const ip = await clientIp()
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
-
-  if (ip) {
-    const [{ count }] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(passwordResetTokens)
-      .where(
-        and(eq(passwordResetTokens.requestedIp, ip), gt(passwordResetTokens.createdAt, oneHourAgo)),
-      )
-    if (count >= MAX_REQUESTS_PER_IP_PER_HOUR) return { outcome: 'rate-limited' }
-  }
 
   const [user] = await db
     .select()
@@ -148,6 +139,7 @@ export async function issueResetToken(email: string): Promise<IssueResult> {
     tokenHash,
     expiresAt: new Date(Date.now() + TOKEN_TTL_MINUTES * 60 * 1000),
     requestedIp: ip,
+    issuedByAdminId: issuedByAdminId ?? null,
   })
 
   const origin = await siteOrigin()

@@ -1,3 +1,5 @@
+import { ResetLinkButton } from '@/components/admin/reset-link-button'
+import { requireAdmin } from '@/lib/auth'
 import { getAllMembers } from '@/lib/queries'
 import { GENDERS } from '@/lib/constants'
 import { formatDate, instagramUrl, normalizeInstagram } from '@/lib/utils'
@@ -5,7 +7,9 @@ import { formatDate, instagramUrl, normalizeInstagram } from '@/lib/utils'
 export const dynamic = 'force-dynamic'
 
 export default async function AdminMembersPage() {
-  const members = await getAllMembers().catch(() => [])
+  // Needed to mark your own row: a link for yourself works, but using it signs
+  // out your other devices, so it is worth flagging before you click.
+  const [admin, members] = await Promise.all([requireAdmin(), getAllMembers().catch(() => [])])
 
   return (
     <div className="space-y-5">
@@ -29,7 +33,7 @@ export default async function AdminMembersPage() {
       ) : (
         <div className="overflow-hidden rounded-2xl border border-foam">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[48rem] border-collapse text-sm">
+            <table className="w-full min-w-[58rem] border-collapse text-sm">
               <thead>
                 <tr className="bg-mist/70 text-left text-xs font-bold uppercase tracking-wide text-tide">
                   <th className="px-4 py-3">Name</th>
@@ -39,6 +43,7 @@ export default async function AdminMembersPage() {
                   <th className="px-4 py-3">Sign-ups</th>
                   <th className="px-4 py-3">Joined</th>
                   <th className="px-4 py-3">Role</th>
+                  <th className="px-4 py-3">Password</th>
                 </tr>
               </thead>
               <tbody>
@@ -81,6 +86,13 @@ export default async function AdminMembersPage() {
                         <span className="chip bg-mist text-tide">Member</span>
                       )}
                     </td>
+                    <td className="px-4 py-3 align-top">
+                      <ResetLinkButton
+                        email={m.email}
+                        name={`${m.firstName} ${m.lastName}`.trim()}
+                        isSelf={m.id === admin.id}
+                      />
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -88,6 +100,16 @@ export default async function AdminMembersPage() {
           </div>
         </div>
       )}
+
+      <p className="rounded-2xl border border-foam bg-mist/40 p-4 text-xs leading-relaxed text-tide">
+        <strong className="text-deep">Resetting a password:</strong> press{' '}
+        <strong className="text-deep">Reset password</strong> on their row and send them the link
+        that appears — WhatsApp, Instagram, however you already talk to them. Opening it lets them
+        choose a new password without needing the old one, and signs them out everywhere else. The
+        link works once and expires after an hour; generating a new one retires the previous link.
+        Check you are talking to the right person before you send it — the link is the only thing
+        standing between someone and that account.
+      </p>
 
       <p className="rounded-2xl border border-foam bg-mist/40 p-4 text-xs leading-relaxed text-tide">
         <strong className="text-deep">Making someone an admin:</strong> add their email to the{' '}

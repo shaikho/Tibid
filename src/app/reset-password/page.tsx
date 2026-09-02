@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { AuthShell } from '@/components/auth/auth-shell'
 import { ResetPasswordForm } from '@/app/reset-password/reset-password-form'
 import { Alert } from '@/components/ui/form'
+import { SITE } from '@/lib/constants'
 import { checkResetToken } from '@/lib/password-reset'
 
 export const metadata: Metadata = {
@@ -29,10 +30,10 @@ export default async function ResetPasswordPage({
   if (check.status !== 'valid') {
     const reason =
       check.status === 'used'
-        ? 'That link has already been used, or a newer one was sent after it.'
+        ? 'That link has already been used, or a newer one was issued after it.'
         : check.status === 'expired'
           ? 'That link has expired — they only last an hour.'
-          : 'That link is not valid. It may have been cut in half by your email app.'
+          : 'That link is not valid. It may have been cut in half on the way to you.'
 
     return (
       <AuthShell
@@ -50,12 +51,17 @@ export default async function ResetPasswordPage({
         <div className="space-y-5">
           <Alert tone="info">{reason}</Alert>
           <p className="text-sm leading-relaxed text-tide">
-            Ask for a new one and it will arrive in a minute or two. Your current password still
-            works in the meantime.
+            Message the organisers and they will send you another one. Your current password still
+            works in the meantime, if you remember it.
           </p>
-          <Link href="/forgot-password" className="btn-primary w-full !py-3">
-            Send me a new link
-          </Link>
+          <a
+            href={SITE.instagram}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="btn-primary w-full !py-3"
+          >
+            Message us on Instagram
+          </a>
         </div>
       </AuthShell>
     )

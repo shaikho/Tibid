@@ -154,43 +154,29 @@ see it in the admin. **Sync pending rows** is safe to run as many times as you l
 
 ## Password resets
 
-Members who forget their password click **Forgot your password** on the sign-in page, type their
-email, and get a link that lets them choose a new one. The link works once and expires after an
-hour, and using it signs them out of every other device.
+There is no self-serve reset by email. TIBID has no domain of its own, so mail sent from a free
+webmail address cannot be DKIM-signed and a meaningful share of resets would land in spam — which
+a member reads as "the site is broken". So the flow is deliberately human:
 
-Until you configure a provider, the page says so honestly and asks them to contact an organiser —
-nothing is silently swallowed.
+1. The member presses **Forgot your password** on the sign-in page. A dialog tells them to message
+   the organisers and links straight to Instagram.
+2. An organiser opens **Admin → Members**, finds them, and presses **Reset password**.
+3. A one-time link appears with a copy button. Send it however you already talk to that person.
+4. Opening it lets them choose a new password without needing the old one, signs them in, and
+   signs them out of every other device.
 
-### Setting it up with Brevo (free, no domain needed)
+The link works **once** and expires after **an hour**. Generating a new one retires the previous
+link. Which organiser issued it is recorded in `password_reset_tokens.issued_by_admin_id`.
 
-1. Sign up at [brevo.com](https://www.brevo.com) — the free plan sends 300 emails a day, which is
-   far more than resets will ever need.
-2. **Senders, Domains & Dedicated IPs → Senders → Add a sender.** Use the community's email
-   address. Brevo emails it a confirmation link; click it.
-3. **SMTP & API → API Keys → Generate a new API key.**
-4. In Vercel → Settings → Environment Variables, add:
+> **Check who you are talking to before you send a link.** It is the only thing standing between
+> whoever holds it and that account. A message from an unfamiliar handle claiming to be a member
+> is worth a moment's thought.
 
-   | Variable | Value |
-   | --- | --- |
-   | `BREVO_API_KEY` | the key from step 3 |
-   | `EMAIL_FROM` | the address you verified in step 2 |
-   | `EMAIL_FROM_NAME` | `TIBID Community` |
+Run `drizzle/0001_password_reset.sql` once before deploying this. It is idempotent.
 
-5. Redeploy. Test it on your own account before telling anyone else it exists.
-
-> **A caveat worth knowing.** Sending from a free webmail address (`@gmail.com`, `@outlook.com`)
-> cannot be DKIM-signed, because you do not control that domain's DNS. Brevo will show a warning
-> next to the sender, and some resets will land in spam — the page tells members to check there.
-> Buying a domain and using it for both the site and the sender is the fix, and it is the single
-> biggest deliverability improvement available. With a domain, switch to
-> [Resend](https://resend.com) instead: set `RESEND_API_KEY` in place of `BREVO_API_KEY`, verify
-> the domain (three DNS records), and remove the spam caveat entirely.
-
-### Using a different provider
-
-Everything that sends email goes through `sendMail()` in `src/lib/email.ts`. Adding a provider is
-one function there and one line in `activeProvider()` — nothing else in the app knows or cares
-which service delivers the message.
+If you buy a domain later, an automated email route becomes worth having — with a verified domain,
+a provider like [Resend](https://resend.com) delivers reliably and the human step can become
+optional rather than the only path.
 
 ---
 
@@ -300,8 +286,7 @@ src/
 │   ├── activities/                 Public calendar + activity detail & registration
 │   ├── admin/                      Organiser dashboard (guarded by middleware + server checks)
 │   ├── login/  signup/  profile/   Member accounts
-│   ├── forgot-password/            Request a reset link
-│   ├── reset-password/             Choose a new password from a link
+│   ├── reset-password/             Choose a new password from an organiser's link
 │   └── api/
 │       ├── admin/export/           CSV exports
 │       └── auth/logout/
@@ -317,8 +302,6 @@ src/
 ├── lib/
 │   ├── actions/                    Server actions (auth, activities, registrations, resets)
 │   ├── auth.ts  session.ts  password.ts
-│   ├── email.ts                    Provider-agnostic sender (Brevo, Resend, console)
-│   ├── emails/                     Email templates
 │   ├── password-reset.ts           Token issue / check / consume
 │   ├── google-sheets.ts            Service-account JWT → Sheets API v4 append
 │   ├── maps.ts                     Google Maps link → embeddable URL
@@ -345,10 +328,12 @@ src/
   convenience only.
 - Password reset tokens are 256 bits of `randomBytes`. Only their SHA-256 is stored, so a database
   backup cannot be turned into working reset links. Each is single-use, expires after an hour, and
-  asking for a new one retires the previous one.
-- The forgot-password form gives the same answer for every address, and takes the same amount of
-  time either way, so it cannot be used to discover who has a profile.
-- Resets are limited to 5 per address and 12 per IP address per hour.
+  issuing a new one retires the previous one. Merely *opening* a link does not consume it; only
+  setting a password does.
+- Reset links can only be generated by a signed-in admin, and which admin issued each one is
+  recorded. There is no public endpoint that will produce one, so there is nothing for a stranger
+  to probe or enumerate.
+- Even so, no more than 5 links per member per hour — a runaway loop should stop rather than churn.
 - Changing or resetting a password invalidates every session issued before it. Sessions are
   stateless JWTs, so this compares the token's `iat` against `users.password_changed_at` rather
   than keeping a server-side session table.

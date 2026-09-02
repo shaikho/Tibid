@@ -217,9 +217,10 @@ export const galleryItems = pgTable('gallery_items', {
 
 /**
  * Only the SHA-256 of the token is stored, never the token itself. The raw
- * value exists in exactly two places: the link in the email, and the URL the
- * member clicks. So a leaked database backup cannot be used to reset anyone's
- * password — the same reason password hashes are stored rather than passwords.
+ * value exists in exactly two places: the link an organiser copies, and the URL
+ * the member opens. So a leaked database backup cannot be used to reset
+ * anyone's password — the same reason password hashes are stored rather than
+ * passwords.
  *
  * `usedAt` makes a token single-use. It is kept rather than deleted so a second
  * click on the same link can say "this link has already been used" instead of
@@ -236,6 +237,10 @@ export const passwordResetTokens = pgTable(
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
     usedAt: timestamp('used_at', { withTimezone: true }),
     requestedIp: text('requested_ip'),
+    /** Which organiser handed this link out. An audit trail, not a permission. */
+    issuedByAdminId: uuid('issued_by_admin_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

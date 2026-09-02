@@ -2,105 +2,78 @@
 
 import { redirect } from 'next/navigation'
 
-import { createSessionCookie } from '@/lib/auth'
-import { activeProvider, emailConfigured, sendMail } from '@/lib/email'
-import { passwordResetEmail } from '@/lib/emails/password-reset'
+import { createSessionCookie, requireAdmin } from '@/lib/auth'
 import { hashPassword } from '@/lib/password'
 import { TOKEN_TTL_MINUTES, consumeResetToken, issueResetToken } from '@/lib/password-reset'
-import { flattenErrors, forgotPasswordSchema, passwordResetSchema } from '@/lib/validation'
+import { flattenErrors, passwordResetSchema } from '@/lib/validation'
 
 import type { FormState } from './auth'
 
 /**
- * The same answer for every address, whether or not it has a profile. Anything
- * else turns the forgot-password form into a way of asking "is this person in
- * TIBID?", which is a membership list nobody agreed to publish.
+ * Password resets, organiser-issued.
+ *
+ * There is no "email me a link" route: TIBID has no domain, so mail sent from a
+ * free webmail address cannot be authenticated and a meaningful share of resets
+ * would land in spam — which reads to a member as "the site is broken". Instead
+ * an organiser generates the link and hands it over in the channel the community
+ * already uses.
+ *
+ * That trades an automated flow for a human one, and gets something back: the
+ * organiser recognises the person asking, which is a stronger identity check
+ * than possession of a mailbox.
  */
-const SAME_ANSWER_EITHER_WAY =
-  'If that address has a TIBID profile, a reset link is on its way. It expires in an hour — check your spam folder if it has not arrived in a few minutes.'
 
-/**
- * Requesting and not-requesting take very different amounts of work: one sends
- * an email, the other returns immediately. A stopwatch would give away which
- * happened, so every response takes at least this long.
- */
-const MIN_RESPONSE_MS = 450
-
-async function notFasterThan<T>(started: number, value: T): Promise<T> {
-  const remaining = MIN_RESPONSE_MS - (Date.now() - started)
-  if (remaining > 0) await new Promise((resolve) => setTimeout(resolve, remaining))
-  return value
+export type ResetLinkState = {
+  ok?: boolean
+  /** The generated link. Shown once, to the admin, for copying. */
+  url?: string
+  memberName?: string
+  expiresInMinutes?: number
+  error?: string
 }
 
-/* -------------------------------------------------------------------------- */
-
-export async function requestPasswordResetAction(
-  _prev: FormState,
+/**
+ * Generates a reset link for one member. Admins only.
+ *
+ * The rate limit that protects the public flow is skipped here on purpose: it
+ * exists to stop strangers spamming an inbox and probing for accounts, and
+ * neither applies to a signed-in organiser clicking a button. Who issued it is
+ * recorded instead, so the action is attributable rather than merely limited.
+ */
+export async function createResetLinkAction(
+  _prev: ResetLinkState,
   formData: FormData,
-): Promise<FormState> {
-  const started = Date.now()
+): Promise<ResetLinkState> {
+  const admin = await requireAdmin()
 
-  const parsed = forgotPasswordSchema.safeParse({ email: formData.get('email') })
-  if (!parsed.success) return { errors: flattenErrors(parsed.error) }
+  const email = String(formData.get('email') ?? '').trim()
+  if (!email) return { error: 'No member selected.' }
 
-  /*
-   * With no provider configured nothing can be delivered, and that is true
-   * regardless of which address was typed — so saying so reveals nothing about
-   * who has a profile, and saves a member waiting for an email that will never
-   * arrive.
-   */
-  if (!emailConfigured()) {
-    return notFasterThan(started, {
-      errors: {
-        _form:
-          'Password reset emails are not switched on yet. Ask an organiser to reset it for you, or set BREVO_API_KEY in the site settings.',
-      },
-    })
-  }
+  const result = await issueResetToken(email, { issuedByAdminId: admin.id })
 
-  const result = await issueResetToken(parsed.data.email)
-
-  if (result.outcome === 'rate-limited') {
-    // Deliberately not the generic answer: a member clicking twice deserves to
-    // know why nothing new arrived, and this reveals nothing an attacker who
-    // just triggered it does not already know.
-    return notFasterThan(started, {
-      errors: {
-        _form: 'That is a few reset links in a short time. Give it an hour, then try again.',
-      },
-    })
-  }
-
-  if (result.outcome === 'issued') {
-    const { subject, html, text } = passwordResetEmail({
-      firstName: result.user.firstName,
-      resetUrl: result.resetUrl,
-      expiresInMinutes: TOKEN_TTL_MINUTES,
-    })
-
-    const sent = await sendMail({
-      to: result.user.email,
-      toName: `${result.user.firstName} ${result.user.lastName}`.trim(),
-      subject,
-      html,
-      text,
-    })
-
-    if (!sent.ok) {
-      /*
-       * Logged, not shown. Surfacing "we could not send it" only for addresses
-       * that exist would leak exactly what the generic answer is protecting —
-       * so the member sees the same sentence, and the admin sees this line.
-       */
-      console.error(`[password-reset] ${activeProvider()} refused the message: ${sent.error}`)
+  if (result.outcome !== 'issued') {
+    return {
+      error:
+        result.outcome === 'no-account'
+          ? 'No profile with that email address any more — the list may be out of date. Reload the page.'
+          : 'Too many links generated for that member in the last hour. Try again shortly.',
     }
   }
 
-  return notFasterThan(started, { ok: true, message: SAME_ANSWER_EITHER_WAY })
+  return {
+    ok: true,
+    url: result.resetUrl,
+    memberName: `${result.user.firstName} ${result.user.lastName}`.trim(),
+    expiresInMinutes: TOKEN_TTL_MINUTES,
+  }
 }
 
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Sets a new password from a link. No current password required — the link is
+ * the proof, which is the whole point of a reset.
+ */
 export async function resetPasswordAction(
   _prev: FormState,
   formData: FormData,
@@ -122,13 +95,13 @@ export async function resetPasswordAction(
     return {
       errors: {
         _form:
-          'That reset link has expired or has already been used. Ask for a new one and it will work.',
+          'That link has expired or has already been used. Ask an organiser for a new one and it will work.',
       },
     }
   }
 
-  // Signing in here is safe: they proved control of the mailbox, and every
-  // session that existed before this moment has just been invalidated.
+  // Signing in here is safe: the link was the proof, and every session that
+  // existed before this moment has just been invalidated.
   await createSessionCookie(user)
   redirect('/profile?password=updated')
 }
